@@ -1,0 +1,8 @@
+# GitIgnore personalizado para Pikudo Chicken
+/target/
+/.nbproject/
+/nbproject/
+/nbbuild/
+/dist/
+nb-configuration.xml
+*.class
