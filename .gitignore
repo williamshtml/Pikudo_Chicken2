@@ -6,3 +6,8 @@
 /dist/
 nb-configuration.xml
 *.class
+<<<<<<< HEAD
+=======
+.DS_Store
+Thumbs.db
+>>>>>>> origin/main
