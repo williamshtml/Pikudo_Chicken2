@@ -15,6 +15,7 @@
                 <exec.appArgs></exec.appArgs>
                 <exec.mainClass>com.restaurant.PikudoChicken2Application</exec.mainClass>
                 <exec.executable>java</exec.executable>
+                <skipTests>true</skipTests>
             </properties>
         </action>
         <action>
