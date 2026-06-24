@@ -1,13 +1,16 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.repository;
 
-/**
- *
- * @author rodri
- */
-public class UsuarioRepository {
+import com.pikudo.entity.Usuario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+    // Crítico para el Login: busca el usuario por su cuenta de acceso
+    Optional<Usuario> findByUsername(String username);
     
+    // Para listar el personal que está laborando actualmente
+    List<Usuario> findByEstadoTrue();
 }

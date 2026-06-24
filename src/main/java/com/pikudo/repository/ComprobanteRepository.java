@@ -1,13 +1,12 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.repository;
 
-/**
- *
- * @author user
- */
-public class ComprobanteRepository {
-    
+import com.pikudo.entity.Comprobante;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> {
+    // Para evitar duplicación de documentos en la facturación financiera
+    Optional<Comprobante> findBySerieAndNumero(String serie, String numero);
 }
