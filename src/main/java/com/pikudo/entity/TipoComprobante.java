@@ -1,13 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.entity;
 
-/**
- *
- * @author user
- */
-public class TipoComprobante {
-    
+public enum TipoComprobante {
+    BOLETA,         //Para clientes con RUC
+    FACTURA,        //Para clientes con RUC
+    TICKET_INTERNO  //Para control de la polleria o para consumos del personal
 }
