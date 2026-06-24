@@ -1,4 +1,3 @@
-
 package com.pikudo.repository;
 
 import com.pikudo.entity.Categoria;
