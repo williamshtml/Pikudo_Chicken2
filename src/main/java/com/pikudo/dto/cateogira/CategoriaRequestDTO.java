@@ -4,34 +4,24 @@
  */
 package com.pikudo.dto.cateogira;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
- * DTO de salida para devolver datos de una Categoria al cliente.
+ * DTO de entrada para crear o actualizar una Categoria de productos.
  * Agregado por: [tu nombre] - Módulo de categorías/carta.
  */
-
-public class CategoriaResponseDTO {
+public class CategoriaRequestDTO {
     
 
-    private Long id;
+    @NotBlank(message = "El nombre de la categoría es obligatorio")
+    @Size(max = 50)
     private String nombre;
+
+    @Size(max = 150)
     private String descripcion;
 
-    public CategoriaResponseDTO() {
-    }
-
-    public CategoriaResponseDTO(Long id, String nombre, String descripcion) {
-        this.id = id;
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public CategoriaRequestDTO() {
     }
 
     public String getNombre() {
