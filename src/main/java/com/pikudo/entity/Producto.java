@@ -72,6 +72,7 @@ public class Producto {
     @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
     /*
+    @ManyToOne: Define la relacion de muchos a uno con la tabla de "categorias"
     @JoinColumn: Crea la columna de llave foranea "categoria_id" / No espacios vacios
     */
 }
