@@ -7,7 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ManyToOne;
-<<<<<<< HEAD
+
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Enumerated;
@@ -21,7 +21,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-=======
+
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.FetchType;
@@ -39,7 +39,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
->>>>>>> origin/main
 
 @Entity
 @Table(name = "pedidos")
@@ -83,14 +82,11 @@ public class Pedido {
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", length = 20)
     private TipoComprobante tipoComprobante; // Se define al momento de cerrar o pagar la cuenta
-<<<<<<< HEAD
-=======
-    
+
     @Builder.Default
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<DetallePedido> detalles = new ArrayList<>();
     /*
     @OneToMany: Indica relacion de uno a muchos, donde mappedBy = "pedido" le dice a JPA que la relación ya está gobernada por el atributo 'pedido' en DetallePedido.java
     */
->>>>>>> origin/main
 }
