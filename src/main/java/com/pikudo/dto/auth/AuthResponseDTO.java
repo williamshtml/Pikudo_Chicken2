@@ -1,5 +1,4 @@
 package com.pikudo.dto.auth;
-
 /**
  * DTO de salida tras un login o registro exitoso.
  * Contiene el token JWT que el cliente debe usar en las siguientes peticiones,
