@@ -8,5 +8,5 @@ import java.util.List;
 @Repository
 public interface MesaRepository extends JpaRepository<Mesa, Long> {
     // Para que el mozo vea qué mesas están libres para sentar clientes nuevos
-    List<Mesa> findByEstado(String estado);
+    List<Mesa> findByEstado(Boolean estado);
 }
