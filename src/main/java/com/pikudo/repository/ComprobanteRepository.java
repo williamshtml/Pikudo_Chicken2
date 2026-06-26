@@ -8,5 +8,5 @@ import java.util.Optional;
 @Repository
 public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> {
     // Para evitar duplicación de documentos en la facturación financiera
-    Optional<Comprobante> findBySerieAndNumero(String serie, String numero);
+    Optional<Comprobante> findBySerieAndCorrelativo(String serie, String correlativo);
 }

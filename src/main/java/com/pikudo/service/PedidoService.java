@@ -20,10 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
 @Service
 @RequiredArgsConstructor
 public class PedidoService {
-
     private final PedidoRepository pedidoRepository;
     private final MesaRepository mesaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -42,36 +44,45 @@ public class PedidoService {
                 .mesa(mesa)
                 .usuario(usuario)
                 .build();
+        // fechaHora, total y estado usan sus valores @Builder.Default (now(), ZERO, PENDING)
 
         List<DetallePedido> detalles = new ArrayList<>();
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal totalPedido = BigDecimal.ZERO;
 
-        if (dto.getDetalles() != null) {
-            for (PedidoRequestDTO.DetalleItemDTO item : dto.getDetalles()) {
-                Producto producto = productoRepository.findById(item.getProductoId())
-                        .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + item.getProductoId()));
+        for (PedidoRequestDTO.DetalleItemDTO item : dto.getDetalles()) {
+            Producto producto = productoRepository.findById(item.getProductoId())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + item.getProductoId()));
 
-                BigDecimal subtotal = producto.getPrecio()
-                        .multiply(BigDecimal.valueOf(item.getCantidad()));
-
-                DetallePedido detalle = DetallePedido.builder()
-                        .pedido(pedido)
-                        .producto(producto)
-                        .cantidad(item.getCantidad())
-                        .precioUnitario(producto.getPrecio())
-                        .subtotal(subtotal)
-                        .observaciones(item.getObservaciones())
-                        .build();
-
-                detalles.add(detalle);
-                total = total.add(subtotal);
+            if (producto.getStock() < item.getCantidad()) {
+                throw new RuntimeException("Stock insuficiente para el producto: " + producto.getNombre()
+                        + " (disponible: " + producto.getStock() + ", solicitado: " + item.getCantidad() + ")");
             }
+
+            // Se descuenta el stock al momento de crear el pedido
+            producto.setStock(producto.getStock() - item.getCantidad());
+            productoRepository.save(producto);
+
+            BigDecimal precioUnitario = producto.getPrecio();
+            BigDecimal subtotal = precioUnitario.multiply(BigDecimal.valueOf(item.getCantidad()));
+
+            DetallePedido detalle = DetallePedido.builder()
+                    .pedido(pedido)
+                    .producto(producto)
+                    .cantidad(item.getCantidad())
+                    .precioUnitario(precioUnitario)
+                    .subtotal(subtotal)
+                    .observaciones(item.getObservaciones())
+                    .build();
+
+            detalles.add(detalle);
+            totalPedido = totalPedido.add(subtotal);
         }
 
         pedido.setDetalles(detalles);
-        pedido.setTotal(total);
+        pedido.setTotal(totalPedido);
 
-        return toDTO(pedidoRepository.save(pedido));
+        Pedido guardado = pedidoRepository.save(pedido);
+        return toDTO(guardado);
     }
 
     // ─── LISTAR TODOS ─────────────────────────────────────────────────────────
@@ -82,9 +93,17 @@ public class PedidoService {
                 .collect(Collectors.toList());
     }
 
-    // ─── LISTAR POR ESTADO (pantalla de cocina) ───────────────────────────────
+    // ─── LISTAR POR ESTADO (ej: pantalla de cocina = IN_KITCHEN) ──────────────
     public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) {
         return pedidoRepository.findByEstado(estado)
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ─── LISTAR PEDIDOS ABIERTOS DE UNA MESA (distintos de un estado dado) ────
+    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) {
+        return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -97,7 +116,7 @@ public class PedidoService {
         return toDTO(pedido);
     }
 
-    // ─── CAMBIAR ESTADO (PENDING → IN_KITCHEN → PAID / CANCELLED) ────────────
+    // ─── CAMBIAR ESTADO (ej: PENDING → IN_KITCHEN → PAID / CANCELLED) ─────────
     @Transactional
     public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
         Pedido pedido = pedidoRepository.findById(id)
@@ -106,40 +125,52 @@ public class PedidoService {
         return toDTO(pedidoRepository.save(pedido));
     }
 
-    // ─── CANCELAR ─────────────────────────────────────────────────────────────
+    // ─── CANCELAR (repone el stock de los productos del pedido) ───────────────
     @Transactional
     public void cancelar(Long id) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado con id: " + id));
+
         if (pedido.getEstado() == EstadoPedido.PAID) {
             throw new RuntimeException("No se puede cancelar un pedido que ya fue pagado");
         }
+
+        for (DetallePedido detalle : pedido.getDetalles()) {
+            Producto producto = detalle.getProducto();
+            producto.setStock(producto.getStock() + detalle.getCantidad());
+            productoRepository.save(producto);
+        }
+
         pedido.setEstado(EstadoPedido.CANCELLED);
         pedidoRepository.save(pedido);
     }
 
     // ─── MAPPER PRIVADO ───────────────────────────────────────────────────────
     private PedidoResponseDTO toDTO(Pedido p) {
-        List<PedidoResponseDTO.DetalleItemDTO> detallesDTO = p.getDetalles()
-                .stream()
-                .map(d -> new PedidoResponseDTO.DetalleItemDTO(
-                        d.getId(),
-                        d.getProducto().getNombre(),
-                        d.getPrecioUnitario(),
-                        d.getCantidad(),
-                        d.getSubtotal(),
-                        d.getObservaciones()
-                ))
-                .collect(Collectors.toList());
+        PedidoResponseDTO response = new PedidoResponseDTO();
+        response.setId(p.getId());
+        response.setMesaNumero(p.getMesa() != null ? p.getMesa().getNumero() : null);
+        response.setUsuarioNombre(p.getUsuario() != null ? p.getUsuario().getUsername() : null);
+        response.setFechaHora(p.getFechaHora());
+        response.setTotal(p.getTotal());
+        response.setEstadoPedido(p.getEstado() != null ? p.getEstado().name() : null);
 
-        return new PedidoResponseDTO(
-                p.getId(),
-                p.getMesa().getNumero(),
-                p.getUsuario().getUsername(),
-                p.getFechaHora(),
-                p.getTotal(),
-                p.getEstado().name(),
-                detallesDTO
-        );
+        List<PedidoResponseDTO.DetalleItemDTO> detallesDTO = p.getDetalles() == null
+                ? new ArrayList<>()
+                : p.getDetalles().stream().map(this::toDetalleDTO).collect(Collectors.toList());
+        response.setDetalles(detallesDTO);
+
+        return response;
+    }
+
+    private PedidoResponseDTO.DetalleItemDTO toDetalleDTO(DetallePedido d) {
+        PedidoResponseDTO.DetalleItemDTO item = new PedidoResponseDTO.DetalleItemDTO();
+        item.setId(d.getId());
+        item.setProductoNombre(d.getProducto() != null ? d.getProducto().getNombre() : null);
+        item.setPrecioUnitario(d.getPrecioUnitario());
+        item.setCantidad(d.getCantidad());
+        item.setSubtotal(d.getSubtotal());
+        item.setObservaciones(d.getObservaciones());
+        return item;
     }
 }
