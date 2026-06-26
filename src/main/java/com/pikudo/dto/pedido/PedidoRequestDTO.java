@@ -1,105 +1,44 @@
-
 package com.pikudo.dto.pedido;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-/**
- * DTO de entrada para crear un nuevo Pedido.
- * Recibe la mesa, el usuario (mozo/cajero) que lo abre y la lista de detalles (productos pedidos).
- * El total se calcula en el service sumando los subtotales, nunca se recibe del cliente.
- * La clase interna DetalleItemDTO representa cada línea/producto del pedido,
- * ya que no existe un archivo DetallePedidoDTO independiente en el proyecto.
- * Agregado por: [tu nombre] - Módulo de pedidos.
- */
-
+@Getter              // Métodos de lectura automáticos para la cabecera del pedido
+@Setter              // Métodos de escritura automáticos para el backend
+@NoArgsConstructor   // Constructor vacío () obligatorio para Jackson
+@AllArgsConstructor  // Constructor lleno útil para pruebas del sistema
 public class PedidoRequestDTO {
 
-
-
     @NotNull(message = "La mesa es obligatoria")
-    private Long mesaId;
+    private Long mesaId;           // ID de la mesa asignada en el salón
 
     @NotNull(message = "El usuario que registra el pedido es obligatorio")
-    private Long usuarioId;
+    private Long usuarioId;        // ID del mozo o cajero que abre la comanda
 
-    @NotEmpty(message = "El pedido debe tener al menos un producto")
-    @Valid
-    private List<DetalleItemDTO> detalles;
+    @Valid                 // Obliga a validar las restricciones de cada ítem dentro de la lista
+    private List<DetalleItemDTO> detalles; // Listado de platos y bebidas pedidos
 
-    public PedidoRequestDTO() {
-    }
-
-    public Long getMesaId() {
-        return mesaId;
-    }
-
-    public void setMesaId(Long mesaId) {
-        this.mesaId = mesaId;
-    }
-
-    public Long getUsuarioId() {
-        return usuarioId;
-    }
-
-    public void setUsuarioId(Long usuarioId) {
-        this.usuarioId = usuarioId;
-    }
-
-    public List<DetalleItemDTO> getDetalles() {
-        return detalles;
-    }
-
-    public void setDetalles(List<DetalleItemDTO> detalles) {
-        this.detalles = detalles;
-    }
-
-    /**
-     * Clase interna que representa una línea de producto dentro del pedido entrante.
-     * El cliente solo manda producto, cantidad y observaciones; el precio y subtotal
-     * los calcula el service en backend, NUNCA se confía en un precio enviado desde el frontend.
-     */
+    @Getter              // Getters para cada línea de la comanda
+    @Setter              // Setters para cada línea de la comanda
+    @NoArgsConstructor   // Constructor vacío () para mapear los elementos de la lista
+    @AllArgsConstructor  // Constructor completo para añadir líneas rápidamente
     public static class DetalleItemDTO {
 
         @NotNull(message = "El producto es obligatorio")
-        private Long productoId;
+        private Long productoId;    // ID del plato o bebida (ej: 1/4 de pollo)
 
         @NotNull(message = "La cantidad es obligatoria")
         @Min(value = 1, message = "La cantidad debe ser al menos 1")
-        private Integer cantidad;
+        private Integer cantidad;   // Cuántas unidades se solicitan de ese producto
 
-        @Size(max = 200)
-        private String observaciones;
-
-        public DetalleItemDTO() {
-        }
-
-        public Long getProductoId() {
-            return productoId;
-        }
-
-        public void setProductoId(Long productoId) {
-            this.productoId = productoId;
-        }
-
-        public Integer getCantidad() {
-            return cantidad;
-        }
-
-        public void setCantidad(Integer cantidad) {
-            this.cantidad = cantidad;
-        }
-
-        public String getObservaciones() {
-            return observaciones;
-        }
-
-        public void setObservaciones(String observaciones) {
-            this.observaciones = observaciones;
-        }
+        @Size(max = 200, message = "Las observaciones no pueden superar los 200 caracteres")
+        private String observaciones; // Notas especiales de cocina (ej: "Sin ensalada", "Parte pechuga")
     }
 }

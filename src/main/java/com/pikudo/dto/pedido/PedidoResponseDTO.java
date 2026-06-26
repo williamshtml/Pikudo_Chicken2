@@ -1,172 +1,38 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.pedido;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-/**
- * DTO de salida para devolver datos completos de un Pedido al cliente,
- * incluyendo la lista de productos pedidos (detalles).
- * La clase interna DetalleItemDTO representa cada línea/producto del pedido ya registrado.
- * Agregado por: [tu nombre] - Módulo de pedidos.
- */
-
+@Getter              // Genera métodos de lectura para la cabecera del pedido
+@Setter              // Genera métodos de escritura para armar la respuesta desde el Service
+@NoArgsConstructor   // Constructor vacío () estándar para Jackson
+@AllArgsConstructor  // Constructor completo para mapear la entidad padre de golpe
 public class PedidoResponseDTO {
 
-    private Long id;
-    private Integer mesaNumero;
-    private String usuarioNombre;
-    private LocalDateTime fechaHora;
-    private BigDecimal total;
-    private String estadoPedido;
-    private List<DetalleItemDTO> detalles;
+    private Long id;              // ID único del pedido generado en el sistema
+    private Integer mesaNumero;   // Número de la mesa (ej: 4) en lugar de mandar todo el objeto Mesa
+    private String usuarioNombre; // Nombre del mozo/cajero que atiende el pedido
+    private LocalDateTime fechaHora; // Fecha y hora exacta en la que se abrió la comanda
+    private BigDecimal total;     // Monto acumulado total calculado por el backend
+    private String estadoPedido;  // Estado actual del flujo (ej: "PENDIENTE", "PREPARADO", "PAGADO")
+    private List<DetalleItemDTO> detalles; // El desglose de los platos pedidos
 
-    public PedidoResponseDTO() {
-    }
-
-    public PedidoResponseDTO(Long id, Integer mesaNumero, String usuarioNombre, LocalDateTime fechaHora,
-                              BigDecimal total, String estadoPedido, List<DetalleItemDTO> detalles) {
-        this.id = id;
-        this.mesaNumero = mesaNumero;
-        this.usuarioNombre = usuarioNombre;
-        this.fechaHora = fechaHora;
-        this.total = total;
-        this.estadoPedido = estadoPedido;
-        this.detalles = detalles;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Integer getMesaNumero() {
-        return mesaNumero;
-    }
-
-    public void setMesaNumero(Integer mesaNumero) {
-        this.mesaNumero = mesaNumero;
-    }
-
-    public String getUsuarioNombre() {
-        return usuarioNombre;
-    }
-
-    public void setUsuarioNombre(String usuarioNombre) {
-        this.usuarioNombre = usuarioNombre;
-    }
-
-    public LocalDateTime getFechaHora() {
-        return fechaHora;
-    }
-
-    public void setFechaHora(LocalDateTime fechaHora) {
-        this.fechaHora = fechaHora;
-    }
-
-    public BigDecimal getTotal() {
-        return total;
-    }
-
-    public void setTotal(BigDecimal total) {
-        this.total = total;
-    }
-
-    public String getEstadoPedido() {
-        return estadoPedido;
-    }
-
-    public void setEstadoPedido(String estadoPedido) {
-        this.estadoPedido = estadoPedido;
-    }
-
-    public List<DetalleItemDTO> getDetalles() {
-        return detalles;
-    }
-
-    public void setDetalles(List<DetalleItemDTO> detalles) {
-        this.detalles = detalles;
-    }
-
-    /**
-     * Clase interna que representa una línea de producto dentro del pedido ya registrado,
-     * con el precio capturado, subtotal y observaciones de cocina.
-     */
+    @Getter              // Getters automáticos para cada línea de la respuesta
+    @Setter              // Setters automáticos para armar el listado
+    @NoArgsConstructor   // Constructor vacío () requerido para la lista interna
+    @AllArgsConstructor  // Constructor completo para instanciar las líneas en el Service
     public static class DetalleItemDTO {
 
-        private Long id;
-        private String productoNombre;
-        private BigDecimal precioUnitario;
-        private Integer cantidad;
-        private BigDecimal subtotal;
-        private String observaciones;
-
-        public DetalleItemDTO() {
-        }
-
-        public DetalleItemDTO(Long id, String productoNombre, BigDecimal precioUnitario, Integer cantidad,
-                               BigDecimal subtotal, String observaciones) {
-            this.id = id;
-            this.productoNombre = productoNombre;
-            this.precioUnitario = precioUnitario;
-            this.cantidad = cantidad;
-            this.subtotal = subtotal;
-            this.observaciones = observaciones;
-        }
-
-        public Long getId() {
-            return id;
-        }
-
-        public void setId(Long id) {
-            this.id = id;
-        }
-
-        public String getProductoNombre() {
-            return productoNombre;
-        }
-
-        public void setProductoNombre(String productoNombre) {
-            this.productoNombre = productoNombre;
-        }
-
-        public BigDecimal getPrecioUnitario() {
-            return precioUnitario;
-        }
-
-        public void setPrecioUnitario(BigDecimal precioUnitario) {
-            this.precioUnitario = precioUnitario;
-        }
-
-        public Integer getCantidad() {
-            return cantidad;
-        }
-
-        public void setCantidad(Integer cantidad) {
-            this.cantidad = cantidad;
-        }
-
-        public BigDecimal getSubtotal() {
-            return subtotal;
-        }
-
-        public void setSubtotal(BigDecimal subtotal) {
-            this.subtotal = subtotal;
-        }
-
-        public String getObservaciones() {
-            return observaciones;
-        }
-
-        public void setObservaciones(String observaciones) {
-            this.observaciones = observaciones;
-        }
+        private Long id;              // ID único de la línea de detalle
+        private String productoNombre;// Nombre del plato o bebida (ej: "1/2 Pollo a la Brasa")
+        private BigDecimal precioUnitario; // Precio del producto congelado al momento de la compra
+        private Integer cantidad;     // Unidades solicitadas de este ítem
+        private BigDecimal subtotal;  // Cálculo matemático exacto de precio * cantidad
+        private String observaciones; // Notas de preparación enviadas a cocina
     }
 }

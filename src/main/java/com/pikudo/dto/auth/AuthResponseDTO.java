@@ -1,69 +1,19 @@
 package com.pikudo.dto.auth;
 
-/**
- * DTO de salida tras un login o registro exitoso.
- * Contiene el token JWT que el cliente debe usar en las siguientes peticiones,
- * además de datos básicos del usuario autenticado para mostrar en el frontend.
- * NUNCA incluye el password, ni siquiera encriptado, por seguridad.
- * Agregado por: [tu nombre] - Módulo de autenticación.
- */
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-public class AuthResponseDTO {
+@Getter              // Genera los métodos para leer los datos desde el frontend
+@Setter              // Genera los métodos para escribir datos en el objeto
+@NoArgsConstructor   // Constructor vacío () obligatorio para que Spring procese el JSON
+@AllArgsConstructor  // Constructor lleno para instanciar todo el objeto de golpe
+public class AuthResponseDTO {         
 
-    private Long id;
-    private String username;
-    private String nombreCompleto;
-    private String rolNombre;
-    private String token;
-
-    public AuthResponseDTO() {
-    }
-
-    public AuthResponseDTO(Long id, String username, String nombreCompleto, String rolNombre, String token) {
-        this.id = id;
-        this.username = username;
-        this.nombreCompleto = nombreCompleto;
-        this.rolNombre = rolNombre;
-        this.token = token;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getNombreCompleto() {
-        return nombreCompleto;
-    }
-
-    public void setNombreCompleto(String nombreCompleto) {
-        this.nombreCompleto = nombreCompleto;
-    }
-
-    public String getRolNombre() {
-        return rolNombre;
-    }
-
-    public void setRolNombre(String rolNombre) {
-        this.rolNombre = rolNombre;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
+    private Long id;              // ID único del usuario (sirve para mantener la sesión enlazada)
+    private String username;      // Nombre de usuario (ej: "juan.mozo") para pintar en el perfil
+    private String nombreCompleto;// Nombres y Apellidos ya unidos para mostrar un saludo en la app
+    private String rolNombre;     // Texto del rol (ej: "MOZO") para ocultar o mostrar botones en la UI
+    private String token;         // El token JWT crucial que el frontend guardará para validar cada petición
 }

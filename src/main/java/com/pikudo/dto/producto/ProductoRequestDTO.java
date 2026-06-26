@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.producto;
 
 import jakarta.validation.constraints.DecimalMin;
@@ -10,61 +6,29 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-/**
- * DTO de entrada para crear o actualizar un Producto de la carta.
- * Agregado por: [tu nombre] - Módulo de productos/carta.
- */
-
+@Getter              // Genera los métodos para leer los datos enviados desde el formulario
+@Setter              // Genera los métodos para asignarlos al procesar la petición
+@NoArgsConstructor   // Constructor vacío () estándar para Jackson
+@AllArgsConstructor  // Constructor lleno listo para usar en los servicios de la carta
 public class ProductoRequestDTO {
-    
+
     @NotBlank(message = "El nombre del producto es obligatorio")
-    @Size(max = 100)
-    private String nombre;
+    @Size(max = 100, message = "El nombre no puede superar los 100 caracteres")
+    private String nombre;       // Ej: "1/4 de Pollo a la Brasa", "Chicha Morada 1L"
 
     @NotNull(message = "El precio es obligatorio")
     @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor a 0")
-    private BigDecimal precio;
+    private BigDecimal precio;   // Valor monetario exacto del plato
 
     @NotNull(message = "El stock es obligatorio")
     @Min(value = 0, message = "El stock no puede ser negativo")
-    private Integer stock;
+    private Integer stock;       // Cantidad disponible en cocina/barra
 
     @NotNull(message = "La categoría es obligatoria")
-    private Long categoriaId;
-
-    public ProductoRequestDTO() {
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public BigDecimal getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
-    }
-
-    public Integer getStock() {
-        return stock;
-    }
-
-    public void setStock(Integer stock) {
-        this.stock = stock;
-    }
-
-    public Long getCategoriaId() {
-        return categoriaId;
-    }
-
-    public void setCategoriaId(Long categoriaId) {
-        this.categoriaId = categoriaId;
-    }
+    private Long categoriaId;    // ID de la categoría a la que pertenece (vía combo box)
 }

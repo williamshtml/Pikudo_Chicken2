@@ -1,144 +1,28 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.comprobante;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-/**
- * DTO de salida para devolver el comprobante generado al cliente.
- * Agregado por: [tu nombre] - Módulo de comprobantes/facturación.
- */
-
+@Getter              // Genera los métodos de lectura para pintar el comprobante en la UI
+@Setter              // Genera los métodos de escritura para armar la respuesta desde el Service
+@NoArgsConstructor   // Constructor vacío () estándar para Jackson
+@AllArgsConstructor  // Constructor gigante resuelto por Lombok en una sola línea
 public class ComprobanteResponseDTO {
 
-    private Long id;
-    private Long pedidoId;
-    private String tipoComprobante;
-    private String serie;
-    private Integer numeroCorrelativo;
-    private String metodoPago;
-    private BigDecimal subtotal;
-    private BigDecimal igv;
-    private BigDecimal total;
-    private String ruc;
-    private String razonSocial;
-    private LocalDateTime fechaEmision;
-
-    public ComprobanteResponseDTO() {
-    }
-
-    public ComprobanteResponseDTO(Long id, Long pedidoId, String tipoComprobante, String serie, Integer numeroCorrelativo,
-                                   String metodoPago, BigDecimal subtotal, BigDecimal igv, BigDecimal total,
-                                   String ruc, String razonSocial, LocalDateTime fechaEmision) {
-        this.id = id;
-        this.pedidoId = pedidoId;
-        this.tipoComprobante = tipoComprobante;
-        this.serie = serie;
-        this.numeroCorrelativo = numeroCorrelativo;
-        this.metodoPago = metodoPago;
-        this.subtotal = subtotal;
-        this.igv = igv;
-        this.total = total;
-        this.ruc = ruc;
-        this.razonSocial = razonSocial;
-        this.fechaEmision = fechaEmision;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getPedidoId() {
-        return pedidoId;
-    }
-
-    public void setPedidoId(Long pedidoId) {
-        this.pedidoId = pedidoId;
-    }
-
-    public String getTipoComprobante() {
-        return tipoComprobante;
-    }
-
-    public void setTipoComprobante(String tipoComprobante) {
-        this.tipoComprobante = tipoComprobante;
-    }
-
-    public String getSerie() {
-        return serie;
-    }
-
-    public void setSerie(String serie) {
-        this.serie = serie;
-    }
-
-    public Integer getNumeroCorrelativo() {
-        return numeroCorrelativo;
-    }
-
-    public void setNumeroCorrelativo(Integer numeroCorrelativo) {
-        this.numeroCorrelativo = numeroCorrelativo;
-    }
-
-    public String getMetodoPago() {
-        return metodoPago;
-    }
-
-    public void setMetodoPago(String metodoPago) {
-        this.metodoPago = metodoPago;
-    }
-
-    public BigDecimal getSubtotal() {
-        return subtotal;
-    }
-
-    public void setSubtotal(BigDecimal subtotal) {
-        this.subtotal = subtotal;
-    }
-
-    public BigDecimal getIgv() {
-        return igv;
-    }
-
-    public void setIgv(BigDecimal igv) {
-        this.igv = igv;
-    }
-
-    public BigDecimal getTotal() {
-        return total;
-    }
-
-    public void setTotal(BigDecimal total) {
-        this.total = total;
-    }
-
-    public String getRuc() {
-        return ruc;
-    }
-
-    public void setRuc(String ruc) {
-        this.ruc = ruc;
-    }
-
-    public String getRazonSocial() {
-        return razonSocial;
-    }
-
-    public void setRazonSocial(String razonSocial) {
-        this.razonSocial = razonSocial;
-    }
-
-    public LocalDateTime getFechaEmision() {
-        return fechaEmision;
-    }
-
-    public void setFechaEmision(LocalDateTime fechaEmision) {
-        this.fechaEmision = fechaEmision;
-    }
+    private Long id;              // ID único del comprobante emitido
+    private Long pedidoId;        // ID del pedido de origen
+    private String tipoComprobante;// BOLETA, FACTURA o TICKET
+    private String serie;         // Serie del documento (ej: "F001", "B001")
+    private Integer numeroCorrelativo; // Número secuencial autoincrementable (ej: 145)
+    private String metodoPago;    // EFECTIVO, TARJETA, YAPE, PLIN
+    private BigDecimal subtotal;  // Monto base neto sin impuestos
+    private BigDecimal igv;       // Impuesto calculado (18%)
+    private BigDecimal total;     // Monto final cobrado al cliente de la pollería
+    private String ruc;           // RUC de la empresa (si fue factura)
+    private String razonSocial;   // Nombre legal de la empresa (si fue factura)
+    private LocalDateTime fechaEmision; // Fecha y hora exacta en la que se cerró la venta
 }

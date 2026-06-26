@@ -1,31 +1,19 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.sunat;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-
-/**
- * DTO de entrada para consultar datos de un RUC ante SUNAT,
- * usado al momento de generar una FACTURA y validar la Razón Social del cliente.
- * Agregado por: [tu nombre] - Módulo de integración SUNAT.
- */
+@Getter              // Genera el método de lectura para capturar el RUC enviado
+@Setter              // Genera el método de escritura para asignarlo en el Controller
+@NoArgsConstructor   // Constructor vacío () estándar exigido por Jackson
+@AllArgsConstructor  // Constructor lleno para instanciar rápido en pruebas o WebClient/Feign
 public class SunatRucRequestDTO {
-    
+
     @NotBlank(message = "El RUC es obligatorio")
-    @Pattern(regexp = "\\d{11}", message = "El RUC debe tener 11 dígitos")
-    private String ruc;
-
-    public SunatRucRequestDTO() {
-    }
-
-    public String getRuc() {
-        return ruc;
-    }
-
-    public void setRuc(String ruc) {
-        this.ruc = ruc;
-    }
+    @Pattern(regexp = "\\d{11}", message = "El RUC debe tener 11 dígitos numéricos")
+    private String ruc; // Número de RUC de la empresa que solicita factura
 }

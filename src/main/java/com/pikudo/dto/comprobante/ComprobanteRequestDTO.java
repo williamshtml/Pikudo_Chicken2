@@ -1,76 +1,28 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.comprobante;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-/**
- * DTO de entrada para generar el comprobante de cierre de un Pedido.
- * El subtotal, IGV y total NO se reciben del cliente: se recalculan en backend
- * a partir del pedido real guardado en base de datos, para evitar fraude o manipulación.
- * El ruc y razonSocial solo son obligatorios si tipoComprobante es FACTURA (se valida en el service).
- * Agregado por: [tu nombre] - Módulo de comprobantes/facturación.
- */
-
+@Getter              // Genera métodos para leer el pedido, método de pago, etc.
+@Setter              // Genera métodos para asignar valores en la lógica del backend
+@NoArgsConstructor   // Constructor vacío () obligatorio para que Spring capture el JSON
+@AllArgsConstructor  // Constructor completo útil para pruebas de facturación
 public class ComprobanteRequestDTO {
-    
 
     @NotNull(message = "El pedido es obligatorio")
-    private Long pedidoId;
+    private Long pedidoId;          // ID del pedido que se va a cerrar y cobrar
 
     @NotNull(message = "El tipo de comprobante es obligatorio")
-    private String tipoComprobante; // BOLETA, FACTURA, TICKET
+    private String tipoComprobante; // Puede recibir BOLETA, FACTURA o TICKET
 
     @NotBlank(message = "El método de pago es obligatorio")
-    private String metodoPago; // EFECTIVO, TARJETA, YAPE, PLIN
+    private String metodoPago;      // Soporta los métodos locales: EFECTIVO, TARJETA, YAPE, PLIN
 
-    private String ruc; // obligatorio solo si tipoComprobante = FACTURA
+    private String ruc;             // RUC de la empresa (obligatorio solo si tipoComprobante = FACTURA)
 
-    private String razonSocial; // obligatorio solo si tipoComprobante = FACTURA
-
-    public ComprobanteRequestDTO() {
-    }
-
-    public Long getPedidoId() {
-        return pedidoId;
-    }
-
-    public void setPedidoId(Long pedidoId) {
-        this.pedidoId = pedidoId;
-    }
-
-    public String getTipoComprobante() {
-        return tipoComprobante;
-    }
-
-    public void setTipoComprobante(String tipoComprobante) {
-        this.tipoComprobante = tipoComprobante;
-    }
-
-    public String getMetodoPago() {
-        return metodoPago;
-    }
-
-    public void setMetodoPago(String metodoPago) {
-        this.metodoPago = metodoPago;
-    }
-
-    public String getRuc() {
-        return ruc;
-    }
-
-    public void setRuc(String ruc) {
-        this.ruc = ruc;
-    }
-
-    public String getRazonSocial() {
-        return razonSocial;
-    }
-
-    public void setRazonSocial(String razonSocial) {
-        this.razonSocial = razonSocial;
-    }
+    private String razonSocial;     // Nombre de la empresa (obligatorio solo si tipoComprobante = FACTURA)
 }

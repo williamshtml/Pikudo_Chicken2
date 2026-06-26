@@ -1,71 +1,19 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.dto.sunat;
 
-/**
- * DTO de salida con los datos del contribuyente devueltos por la consulta a SUNAT.
- * Agregado por: [tu nombre] - Módulo de integración SUNAT.
- */
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
+@Getter              // Genera los métodos para leer los datos devueltos por la SUNAT
+@Setter              // Genera los métodos para asignar los datos de la consulta externa
+@NoArgsConstructor   // Constructor vacío () estándar para Jackson
+@AllArgsConstructor  // Constructor completo resuelto en una línea por Lombok
 public class SunatRucResponseDTO {
 
-
-    private String ruc;
-    private String razonSocial;
-    private String estado; // ACTIVO, INACTIVO, BAJA DE OFICIO
-    private String condicion; // HABIDO, NO HABIDO
-    private String direccion;
-
-    public SunatRucResponseDTO() {
-    }
-
-    public SunatRucResponseDTO(String ruc, String razonSocial, String estado, String condicion, String direccion) {
-        this.ruc = ruc;
-        this.razonSocial = razonSocial;
-        this.estado = estado;
-        this.condicion = condicion;
-        this.direccion = direccion;
-    }
-
-    public String getRuc() {
-        return ruc;
-    }
-
-    public void setRuc(String ruc) {
-        this.ruc = ruc;
-    }
-
-    public String getRazonSocial() {
-        return razonSocial;
-    }
-
-    public void setRazonSocial(String razonSocial) {
-        this.razonSocial = razonSocial;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
-
-    public String getCondicion() {
-        return condicion;
-    }
-
-    public void setCondicion(String condicion) {
-        this.condicion = condicion;
-    }
-
-    public String getDireccion() {
-        return direccion;
-    }
-
-    public void setDireccion(String direccion) {
-        this.direccion = direccion;
-    }
+    private String ruc;          // Número de RUC de 11 dígitos consultado
+    private String razonSocial;  // Nombre legal o denominación de la empresa
+    private String estado;       // Estado del contribuyente (ej: "ACTIVO", "INACTIVO")
+    private String condicion;    // Condición domiciliaria (ej: "HABIDO", "NO HABIDO")
+    private String direccion;    // Dirección fiscal registrada ante la SUNAT
 }
