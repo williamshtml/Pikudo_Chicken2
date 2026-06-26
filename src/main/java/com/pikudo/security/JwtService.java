@@ -15,7 +15,7 @@ import java.util.function.Function;
 @Service
 
 public class JwtService {
-    // 🔥 IMPORTANTE: En producción, esta clave secreta debe venir de un archivo de propiedades seguro (application.properties)
+    // IMPORTANTE: En producción, esta clave secreta debe venir de un archivo de propiedades seguro (application.properties)
     // Debe tener al menos 256 bits (32 caracteres) de longitud.
     private static final String SECRET_KEY = "MiClaveSecretaSuperSeguraParaLaPolleriaPikudoChicken2026!";
     
