@@ -1,13 +1,29 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.util;
 
-/**
- *
- * @author user
- */
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class FechaUtil {
-    
+    // Formato estándar: "dd/MM/yyyy HH:mm:ss" (Ej: 27/06/2026 11:45:00)
+    private static final DateTimeFormatter FORMATO_ESTANDAR = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+
+    /*
+     Convierte un LocalDateTime a una cadena de texto formateada para el frontend o los tickets.
+     */
+    public static String formatearFecha(LocalDateTime fecha) {
+        if (fecha == null) {
+            return "";
+        }
+        return fecha.format(FORMATO_ESTANDAR);
+    }
+
+    /*
+     Convierte una cadena de texto de vuelta a un objeto LocalDateTime.
+     */
+    public static LocalDateTime parsearFecha(String fechaStr) {
+        if (fechaStr == null || fechaStr.trim().isEmpty()) {
+            return null;
+        }
+        return LocalDateTime.parse(fechaStr, FORMATO_ESTANDAR);
+    }
 }
