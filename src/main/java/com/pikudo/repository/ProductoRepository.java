@@ -7,6 +7,7 @@ import java.util.List;
 
 @Repository
 public interface ProductoRepository extends JpaRepository<Producto, Long> {
+    
     // Para mostrar en la tablet/celular del mozo solo lo que está activo para vender
     List<Producto> findByEstadoTrue();
     

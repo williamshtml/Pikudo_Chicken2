@@ -8,31 +8,32 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-@Getter              // Genera métodos de lectura para la cabecera del pedido
-@Setter              // Genera métodos de escritura para armar la respuesta desde el Service
-@NoArgsConstructor   // Constructor vacío () estándar para Jackson
-@AllArgsConstructor  // Constructor completo para mapear la entidad padre de golpe
+@Getter              
+@Setter              
+@NoArgsConstructor   
+@AllArgsConstructor  
 public class PedidoResponseDTO {
 
-    private Long id;              // ID único del pedido generado en el sistema
-    private Integer mesaNumero;   // Número de la mesa (ej: 4) en lugar de mandar todo el objeto Mesa
-    private String usuarioNombre; // Nombre del mozo/cajero que atiende el pedido
-    private LocalDateTime fechaHora; // Fecha y hora exacta en la que se abrió la comanda
-    private BigDecimal total;     // Monto acumulado total calculado por el backend
-    private String estadoPedido;  // Estado actual del flujo (ej: "PENDIENTE", "PREPARADO", "PAGADO")
-    private List<DetalleItemDTO> detalles; // El desglose de los platos pedidos
+    private Long id;              
+    private Integer mesaNumero;   
+    private String usuarioNombre; 
+    private LocalDateTime fechaHora; 
+    private BigDecimal total;     
+    private BigDecimal subtotalNeto; // <-- AGREGAR ESTE
+    private BigDecimal igv;          // <-- AGREGAR ESTE
+    private String estadoPedido;  
+    private List<DetalleItemDTO> detalles; 
 
-    @Getter              // Getters automáticos para cada línea de la respuesta
-    @Setter              // Setters automáticos para armar el listado
-    @NoArgsConstructor   // Constructor vacío () requerido para la lista interna
-    @AllArgsConstructor  // Constructor completo para instanciar las líneas en el Service
+    @Getter              
+    @Setter              
+    @NoArgsConstructor   
+    @AllArgsConstructor  
     public static class DetalleItemDTO {
-
-        private Long id;              // ID único de la línea de detalle
-        private String productoNombre;// Nombre del plato o bebida (ej: "1/2 Pollo a la Brasa")
-        private BigDecimal precioUnitario; // Precio del producto congelado al momento de la compra
-        private Integer cantidad;     // Unidades solicitadas de este ítem
-        private BigDecimal subtotal;  // Cálculo matemático exacto de precio * cantidad
-        private String observaciones; // Notas de preparación enviadas a cocina
+        private Long id;              
+        private String productoNombre;
+        private BigDecimal precioUnitario; 
+        private Integer cantidad;     
+        private BigDecimal subtotal;  
+        private String observaciones; 
     }
 }
