@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 
-public class Producto {
+public class Producto extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
