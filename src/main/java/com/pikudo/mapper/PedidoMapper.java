@@ -56,7 +56,7 @@ public class PedidoMapper {
 
         PedidoResponseDTO response = new PedidoResponseDTO();
         response.setId(entity.getId());
-        response.setFechaHora(entity.getFechaHora());
+        response.setFechaHora(entity.getFechaCreacion());
         response.setTotal(entity.getTotal());
         
         if (entity.getEstado() != null) {
