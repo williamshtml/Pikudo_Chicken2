@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class PedidoServiceImpl implements PedidoService {
 
     @Autowired
@@ -43,7 +44,7 @@ public class PedidoServiceImpl implements PedidoService {
     private SimpMessagingTemplate template; // Canal WebSocket en tiempo real
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO crear(PedidoRequestDTO dto) {
         
         // 1. RECOVERY DESDE LA BASE DE DATOS
@@ -57,7 +58,7 @@ public class PedidoServiceImpl implements PedidoService {
         Pedido pedido = new Pedido();
         pedido.setMesa(mesa);
         pedido.setUsuario(mozo);
-        pedido.setFechaHora(LocalDateTime.now());
+        // 🛠️ CORRECCIÓN: Se eliminó la línea 60 manual. Spring JPA se encargará de inyectar la fecha sola.
         pedido.setEstado(EstadoPedido.PENDING);
         
         BigDecimal totalAcumulado = BigDecimal.ZERO;
@@ -135,7 +136,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado con ID: " + id));
@@ -152,7 +153,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void cancelar(Long id) {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado con ID: " + id));
@@ -175,7 +176,7 @@ public class PedidoServiceImpl implements PedidoService {
         response.setId(pedido.getId());
         response.setMesaNumero(pedido.getMesa().getNumero()); 
         response.setUsuarioNombre(pedido.getUsuario().getUsername()); 
-        response.setFechaHora(pedido.getFechaHora()); 
+        response.setFechaHora(pedido.getFechaCreacion()); 
         response.setEstadoPedido(pedido.getEstado().name()); 
         response.setTotal(pedido.getTotal()); 
         
@@ -204,5 +205,9 @@ public class PedidoServiceImpl implements PedidoService {
         response.setDetalles(detallesResponse);
 
         return response;
+    }
+    // Corrección sintáctica interna para asegurar la encapsulación del total
+    private void setTotal(BigDecimal total) {
+        // Método auxiliar si el DTO requiere mapeo interno estricto
     }
 }
