@@ -32,7 +32,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 
-public class Pedido {
+public class Pedido extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
