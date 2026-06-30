@@ -36,7 +36,7 @@ public class SecurityConfig {
             
             // Configuración de rutas protegidas
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // El login y registro son de libre acceso
+                .requestMatchers("/api/auth/**", "/ws-polleria/**").permitAll() // El login y registro son de libre acceso
                 .anyRequest().authenticated() // Cualquier otra petición (pedidos, mesas) requiere token válido
             )
             
