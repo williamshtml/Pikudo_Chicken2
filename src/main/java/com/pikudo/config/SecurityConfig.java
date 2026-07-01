@@ -12,18 +12,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 @Configuration
 @EnableWebSecurity
-
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
-
     // Inyectamos el filtro JWT mediante constructor
     public SecurityConfig(JwtFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
     }
-
     /*
      Define la cadena de filtros de seguridad. Aquí le indicamos a Spring qué rutas
      son públicas (como el Login) y cuáles requieren token obligatorio.
@@ -36,7 +32,11 @@ public class SecurityConfig {
             
             // Configuración de rutas protegidas
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/ws-polleria/**").permitAll() // El login y registro son de libre acceso
+                // El login/registro es de libre acceso.
+                // El handshake HTTP inicial de /ws-pikudo tambien debe ser publico:
+                // la autenticacion real del usuario se valida aparte, a nivel de mensaje STOMP
+                // (ver WebSocketAuthInterceptor), no en este filtro HTTP.
+                .requestMatchers("/api/auth/**", "/ws-pikudo/**").permitAll()
                 .anyRequest().authenticated() // Cualquier otra petición (pedidos, mesas) requiere token válido
             )
             
@@ -47,10 +47,8 @@ public class SecurityConfig {
             
             // Enganchamos nuestro filtro JWT antes del filtro de autenticación por defecto de Spring
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
-
     /*
      Bean encargado de encriptar las contraseñas en la base de datos usando el algoritmo BCrypt.
      */
@@ -58,7 +56,6 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
     /*
      Administrador de autenticación requerido para procesar el Login en los servicios.
      */

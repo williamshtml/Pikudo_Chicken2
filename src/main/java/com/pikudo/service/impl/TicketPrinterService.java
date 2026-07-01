@@ -103,4 +103,74 @@ public class TicketPrinterService {
             // si una impresora esta apagada o desconectada
         }
     }
+
+    /**
+     * Imprime la precuenta para el motorizado (formato tipo boleta preliminar,
+     * NO es un comprobante de pago valido ante SUNAT).
+     * Se imprime en la impresora de caja cuando el pedido pasa a ON_DELIVERY.
+     */
+    public void imprimirPrecuentaDelivery(Pedido pedido, Impresora impresoraCaja) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(impresoraCaja.getIp(), impresoraCaja.getPuerto()), 3000);
+            OutputStream out = socket.getOutputStream();
+
+            out.write(INIT);
+            out.write(CENTER);
+            out.write(BOLD_ON);
+            out.write("PIKUDO CHICKEN\n".getBytes(StandardCharsets.UTF_8));
+            out.write(BOLD_OFF);
+            out.write(LEFT);
+            out.write(LF);
+
+            out.write(("Pedido        : " + pedido.getId() + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write(("Fecha         : " + pedido.getFechaCreacion() + "\n").getBytes(StandardCharsets.UTF_8));
+
+            if (pedido.getRepartidor() != null) {
+                out.write(("Repartidor    : " + pedido.getRepartidor().getUsername() + "\n").getBytes(StandardCharsets.UTF_8));
+            }
+
+            out.write(LF);
+            out.write(("Direccion     : " + valorOGuion(pedido.getDireccion()) + "\n").getBytes(StandardCharsets.UTF_8));
+            // NOTA: si en el futuro agregas telefono/referencia/zona al Pedido,
+            // se imprimen aqui mismo siguiendo el mismo patron.
+
+            out.write(LF);
+            out.write("--------------------------------\n".getBytes(StandardCharsets.UTF_8));
+            out.write("Cant. Producto            Subtotal\n".getBytes(StandardCharsets.UTF_8));
+            out.write("--------------------------------\n".getBytes(StandardCharsets.UTF_8));
+
+            for (DetallePedido d : pedido.getDetalles()) {
+                String linea = String.format("%.2f %-20s %6.2f\n",
+                        d.getCantidad().doubleValue(),
+                        d.getProducto().getNombre(),
+                        d.getSubtotal());
+                out.write(linea.getBytes(StandardCharsets.UTF_8));
+            }
+
+            out.write("--------------------------------\n".getBytes(StandardCharsets.UTF_8));
+            out.write(BOLD_ON);
+            out.write(("Total S/      : " + pedido.getTotal() + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write(BOLD_OFF);
+
+            out.write(LF);
+            out.write(CENTER);
+            out.write("ESTE DOCUMENTO NO ES UN\n".getBytes(StandardCharsets.UTF_8));
+            out.write("COMPROBANTE DE PAGO,\n".getBytes(StandardCharsets.UTF_8));
+            out.write("ES UN PRELIMINAR DE SU CUENTA\n".getBytes(StandardCharsets.UTF_8));
+
+            out.write(LF);
+            out.write(LF);
+            out.write(CUT);
+            out.flush();
+
+            log.info("Precuenta de delivery impresa para pedido #{}", pedido.getId());
+
+        } catch (Exception e) {
+            log.error("Error al imprimir precuenta del pedido #{}: {}", pedido.getId(), e.getMessage());
+        }
+    }
+
+    private String valorOGuion(String valor) {
+        return (valor == null || valor.isBlank()) ? "-" : valor;
+    }
 }
