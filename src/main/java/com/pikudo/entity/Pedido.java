@@ -42,10 +42,12 @@ public class Pedido extends Auditable {
     @JoinColumn(name = "repartidor_id")
     private Usuario repartidor;
 
+    @Builder.Default
     @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
+    @Builder.Default
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -58,6 +60,13 @@ public class Pedido extends Auditable {
     
     @Column(name = "tipo_pedido", length = 20)
     private String tipoPedido;
+    
+    // ─── CAMPOS ADICIONALES PARA DELIVERY ────────────────────────────────────
+    @Column(name = "direccion", length = 255)
+    private String direccion;
+
+    @Column(name = "url_maps", length = 500)
+    private String urlMaps;
 
     @Builder.Default // Necesario para que el builder respete el ArrayList vacío
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
