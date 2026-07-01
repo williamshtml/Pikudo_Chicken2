@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteResponseDTO;

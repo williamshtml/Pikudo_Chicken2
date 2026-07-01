@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.service.ConsultaRucService;
 import com.pikudo.dto.sunat.SunatRucRequestDTO;

@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.service.MesaService;
 import com.pikudo.dto.mesa.MesaRequestDTO;

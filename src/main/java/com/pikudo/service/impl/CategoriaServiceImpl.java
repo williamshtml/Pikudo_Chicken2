@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.service.CategoriaService;
 import com.pikudo.dto.cateogira.CategoriaRequestDTO;

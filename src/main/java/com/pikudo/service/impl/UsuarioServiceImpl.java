@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.service.UsuarioService; // Importa la interfaz
 import com.pikudo.dto.usuario.UsuarioRequestDTO;

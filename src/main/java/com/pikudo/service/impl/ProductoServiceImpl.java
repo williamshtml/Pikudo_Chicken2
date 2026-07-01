@@ -1,4 +1,4 @@
-package com.pikudo.sevice.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.service.ProductoService;
 import com.pikudo.dto.producto.ProductoRequestDTO;
