@@ -1,40 +1,9 @@
 package com.pikudo.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
-
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,8 +16,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class Pedido {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -56,37 +25,39 @@ public class Pedido {
     @NotNull(message = "La mesa es obligatoria")
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "mesa_id", nullable = false)
-    private Mesa mesa; // Registrara la mesa asignada al pedido
+    private Mesa mesa;
 
-    @NotNull(message = "El empleado es obligatorio")
+    // EL CAMBIO AQUÍ: 
+    // Separamos el Mesero (quien atiende) del Cajero (quien cobra)
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario; // Registrara al mozo o cajero que abrió la orden
+    @JoinColumn(name = "mesero_id") // Relación con el mesero
+    private Usuario mesero;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "cajero_id") // Relación con el cajero
+    private Usuario cajero;
 
     @Builder.Default
     @Column(name = "fecha_hora", nullable = false)
-    private LocalDateTime fechaHora = LocalDateTime.now(); // Registrara el momento exacto de la apertura
+    private LocalDateTime fechaHora = LocalDateTime.now();
 
     @NotNull(message = "El total es obligatorio")
-    @PositiveOrZero(message = "El total acumulado no puede ser negativo")
+    @PositiveOrZero
     @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal total = BigDecimal.ZERO; // Sumatoria de lo consumido (inicia en 0.00 por defecto)
+    private BigDecimal total = BigDecimal.ZERO;
 
     @NotNull(message = "El estado del pedido es obligatorio")
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(nullable = false, length = 20)
-    private EstadoPedido estado = EstadoPedido.PENDING; // Inicia por defecto en PENDING
+    private EstadoPedido estado = EstadoPedido.PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", length = 20)
-    private TipoComprobante tipoComprobante; // Se define al momento de cerrar o pagar la cuenta
+    private TipoComprobante tipoComprobante;
 
     @Builder.Default
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<DetallePedido> detalles = new ArrayList<>();
-    /*
-    @OneToMany: Indica relacion de uno a muchos, donde mappedBy = "pedido" le dice a JPA que la relación ya está gobernada por el atributo 'pedido' en DetallePedido.java
-    */
 }

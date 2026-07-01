@@ -25,4 +25,8 @@ public class ComprobanteResponseDTO {
     private String ruc;           // RUC de la empresa (si fue factura)
     private String razonSocial;   // Nombre legal de la empresa (si fue factura)
     private LocalDateTime fechaEmision; // Fecha y hora exacta en la que se cerró la venta
+    
+    // Campos incorporados para impresión en ticket
+    private String nombreCajero;  // Nombre del usuario que procesó el cobro
+    private String nombreMesero;  // Nombre del usuario que atendió la mesa (nulo si es pedido de caja)
 }
