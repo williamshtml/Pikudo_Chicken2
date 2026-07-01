@@ -6,6 +6,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,7 +39,10 @@ public class Categoria {
     @NotBlank: Valida que el nombre de la categoria no llegue vacio. De ser asi, se frena la operacion y salta el mensaje indicado
     @Column: No se permite usernames duplicados / No espacios vacios / Limite de caracteres: 60
     */
-
+   
+@Enumerated(EnumType.STRING)
+@Column(name = "area_preparacion", length = 20)
+private AreaPreparacion areaPreparacion;
     @Builder.Default
     @Column(nullable = false)
     private Boolean estado = true;
