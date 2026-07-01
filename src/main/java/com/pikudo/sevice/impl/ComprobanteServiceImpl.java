@@ -1,11 +1,11 @@
 package com.pikudo.sevice.impl;
 
-import com.pikudo.service.ComprobanteService;
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteResponseDTO;
 import com.pikudo.entity.*;
 import com.pikudo.repository.ComprobanteRepository;
 import com.pikudo.repository.PedidoRepository;
+import com.pikudo.service.ComprobanteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +15,7 @@ import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ComprobanteServiceImpl implements ComprobanteService {
 
     private final ComprobanteRepository comprobanteRepository;
@@ -23,10 +24,9 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     @Override
-    @Transactional
     public ComprobanteResponseDTO emitir(ComprobanteRequestDTO dto) {
         Pedido pedido = pedidoRepository.findById(dto.getPedidoId())
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado con id: " + dto.getPedidoId()));
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado: " + dto.getPedidoId()));
 
         if (pedido.getEstado() == EstadoPedido.PAID) {
             throw new RuntimeException("El pedido ya tiene un comprobante emitido");
@@ -34,10 +34,8 @@ public class ComprobanteServiceImpl implements ComprobanteService {
 
         TipoComprobante tipo = TipoComprobante.valueOf(dto.getTipoComprobante().toUpperCase());
 
-        // Validaciones para FACTURA
-        if (tipo == TipoComprobante.FACTURA) {
-            if (dto.getRuc() == null || dto.getRuc().isBlank()) throw new RuntimeException("El RUC es obligatorio para factura");
-            if (dto.getRazonSocial() == null || dto.getRazonSocial().isBlank()) throw new RuntimeException("Razón social obligatoria para factura");
+        if (tipo == TipoComprobante.FACTURA && (dto.getRuc() == null || dto.getRazonSocial() == null)) {
+            throw new RuntimeException("RUC y Razón Social obligatorios para factura");
         }
 
         BigDecimal montoTotal = pedido.getTotal();
@@ -45,7 +43,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         BigDecimal igv = montoTotal.subtract(montoNeto);
 
         String serie = (tipo == TipoComprobante.FACTURA) ? "F001" : "B001";
-        String correlativo = String.format("%08d", comprobanteRepository.count() + 1);
+        String correlativo = String.format("%08d", comprobanteRepository.countByTipoComprobante(tipo) + 1);
 
         Comprobante comprobante = Comprobante.builder()
                 .pedido(pedido)
@@ -69,6 +67,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         return toDTO(guardado);
     }
 
+    // --- AQUÍ ESTABA EL MÉTODO FALTANTE ---
     @Override
     @Transactional(readOnly = true)
     public ComprobanteResponseDTO buscarPorId(Long id) {
@@ -80,8 +79,8 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     private ComprobanteResponseDTO toDTO(Comprobante c) {
         ComprobanteResponseDTO r = new ComprobanteResponseDTO();
         r.setId(c.getId());
-        r.setPedidoId(c.getPedido() != null ? c.getPedido().getId() : null);
-        r.setTipoComprobante(c.getTipoComprobante() != null ? c.getTipoComprobante().name() : null);
+        r.setPedidoId(c.getPedido().getId());
+        r.setTipoComprobante(c.getTipoComprobante().name());
         r.setSerie(c.getSerie());
         r.setNumeroCorrelativo(Integer.parseInt(c.getCorrelativo()));
         r.setMetodoPago(c.getMetodo_pago());
@@ -90,21 +89,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         r.setTotal(c.getMontoTotal());
         r.setRuc(c.getRuc());
         r.setRazonSocial(c.getRazonSocial());
-        r.setFechaEmision(c.getFechaEmision());
 
-        // Lógica para Cajero y Mesero
-        if (c.getPedido() != null) {
-            // El cajero es el usuario que procesa el pedido en ese momento
-            if (c.getPedido().getCajero() != null) {
-                r.setNombreCajero(c.getPedido().getCajero().getUsername());
-            }
-            // El mesero solo se asigna si existió atención en mesa
-            if (c.getPedido().getMesero() != null) {
-                r.setNombreMesero(c.getPedido().getMesero().getUsername());
-            } else {
-                r.setNombreMesero(null); // El frontend lo detecta como vacío y no imprime la línea
-            }
+        Pedido p = c.getPedido();
+        r.setNombreCajero(p.getCajero() != null ? p.getCajero().getUsername() : "N/A");
+
+        if ("MESA".equals(p.getTipoPedido())) {
+            r.setNombreMesero(p.getMesero() != null ? p.getMesero().getUsername() : "N/A");
+        } else {
+            r.setNombreMesero(p.getRepartidor() != null ? "Repartidor: " + p.getRepartidor().getUsername() : "Por asignar");
         }
+
         return r;
     }
 }

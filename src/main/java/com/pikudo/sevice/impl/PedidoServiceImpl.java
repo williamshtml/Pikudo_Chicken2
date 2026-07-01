@@ -7,14 +7,15 @@ import com.pikudo.repository.*;
 import com.pikudo.service.PedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -26,19 +27,23 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private MesaRepository mesaRepository;
     @Autowired private SimpMessagingTemplate template;
 
+    // --- MÉTODOS DE CREACIÓN Y ESTADO ---
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO crear(PedidoRequestDTO dto) {
-        Mesa mesa = mesaRepository.findById(dto.getMesaId())
-                .orElseThrow(() -> new RuntimeException("Mesa no encontrada con ID: " + dto.getMesaId()));
-        
-        Usuario mesero = usuarioRepository.findById(dto.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + dto.getUsuarioId()));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario mesero = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario de sesión no encontrado"));
+
+        Mesa mesa = (dto.getMesaId() != null) ? mesaRepository.findById(dto.getMesaId())
+                .orElseThrow(() -> new RuntimeException("Mesa no encontrada")) : null;
 
         Pedido pedido = new Pedido();
         pedido.setMesa(mesa);
-        pedido.setMesero(mesero); // Correcto: usamos el campo de la entidad
+        pedido.setMesero(mesero);
         pedido.setEstado(EstadoPedido.PENDING);
+        pedido.setTipoPedido(mesa == null ? "DELIVERY" : "MESA");
         
         BigDecimal totalAcumulado = BigDecimal.ZERO;
         List<DetallePedido> detallesEntidad = new ArrayList<>();
@@ -60,94 +65,104 @@ public class PedidoServiceImpl implements PedidoService {
                 detallesEntidad.add(detalle);
             }
         }
-        
-        pedido.setTotal(totalAcumulado); 
+        pedido.setTotal(totalAcumulado);
         pedido.setDetalles(detallesEntidad);
 
-        Pedido pedidoGuardado = pedidoRepository.save(pedido);
-        PedidoResponseDTO response = mapearADto(pedidoGuardado);
-        template.convertAndSend("/topic/pedidos", response);
-
-        return response;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PedidoResponseDTO> listarTodos() {
-        return mapearAListas(pedidoRepository.findAll());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) {
-        return mapearAListas(pedidoRepository.findByEstado(estado));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) {
-        return mapearAListas(pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PedidoResponseDTO buscarPorId(Long id) {
-        return mapearADto(pedidoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado")));
+        Pedido guardado = pedidoRepository.save(pedido);
+        return mapearADto(guardado);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario user = usuarioRepository.findByUsername(username).orElseThrow();
         Pedido pedido = pedidoRepository.findById(id).orElseThrow();
+        
+        if (nuevoEstado == EstadoPedido.PAID) pedido.setCajero(user);
+        
         pedido.setEstado(nuevoEstado);
         Pedido actualizado = pedidoRepository.save(pedido);
         PedidoResponseDTO response = mapearADto(actualizado);
+        
         template.convertAndSend("/topic/pedidos", response);
         return response;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void cancelar(Long id) {
-        pedidoRepository.deleteById(id);
+    public PedidoResponseDTO tomarPedido(Long id) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario repartidor = usuarioRepository.findByUsername(username).orElseThrow();
+        Pedido p = pedidoRepository.findById(id).orElseThrow();
+        
+        p.setRepartidor(repartidor);
+        p.setEstado(EstadoPedido.ON_DELIVERY);
+        return mapearADto(pedidoRepository.save(p));
     }
 
-    private List<PedidoResponseDTO> mapearAListas(List<Pedido> pedidos) {
-        List<PedidoResponseDTO> lista = new ArrayList<>();
-        for (Pedido p : pedidos) lista.add(mapearADto(p));
-        return lista;
+    // --- MÉTODOS DE CONSULTA ---
+
+    @Override
+    public List<PedidoResponseDTO> listarTodos() {
+        return pedidoRepository.findAll().stream().map(this::mapearADto).collect(Collectors.toList());
     }
 
-    private PedidoResponseDTO mapearADto(Pedido p) {
+    @Override
+    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) {
+        return pedidoRepository.findByEstado(estado).stream().map(this::mapearADto).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) {
+        return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido).stream().map(this::mapearADto).collect(Collectors.toList());
+    }
+
+    @Override
+    public PedidoResponseDTO buscarPorId(Long id) {
+        return mapearADto(pedidoRepository.findById(id).orElseThrow());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelar(Long id) { pedidoRepository.deleteById(id); }
+
+    // --- MAPEO PRIVADO ---
+
+  private PedidoResponseDTO mapearADto(Pedido p) {
         PedidoResponseDTO r = new PedidoResponseDTO();
         r.setId(p.getId());
-        r.setMesaNumero(p.getMesa().getNumero());
-        r.setUsuarioNombre(p.getMesero() != null ? p.getMesero().getUsername() : "Sin asignar");
-   
-        r.setEstadoPedido(p.getEstado().name());
+        r.setMesaNumero(p.getMesa() != null ? p.getMesa().getNumero() : 0);
         r.setTotal(p.getTotal());
+        r.setEstadoPedido(p.getEstado().name());
+        
+        // 1. Siempre se registra quién cobró
+        r.setCajeroNombre(p.getCajero() != null ? p.getCajero().getUsername() : "Pendiente de Caja");
+        
+        // 2. Registro dinámico según el tipo de pedido
+        if ("MESA".equals(p.getTipoPedido())) {
+            r.setResponsableNombre(p.getMesero() != null ? p.getMesero().getUsername() : "N/A");
+            r.setResponsableRol("Mesero");
+        } else if ("DELIVERY".equals(p.getTipoPedido())) {
+            r.setResponsableNombre(p.getRepartidor() != null ? p.getRepartidor().getUsername() : "Por asignar");
+            r.setResponsableRol("Repartidor");
+        } else {
+            r.setResponsableNombre("Mostrador");
+            r.setResponsableRol("Venta Directa");
+        }
         
         BigDecimal neto = p.getTotal().divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
         r.setSubtotalNeto(neto);
         r.setIgv(p.getTotal().subtract(neto));
 
-        List<PedidoResponseDTO.DetalleItemDTO> detalles = new ArrayList<>();
-        for (DetallePedido d : p.getDetalles()) {
+        r.setDetalles(p.getDetalles().stream().map(d -> {
             PedidoResponseDTO.DetalleItemDTO item = new PedidoResponseDTO.DetalleItemDTO();
-            item.setId(d.getId());
             item.setProductoNombre(d.getProducto().getNombre());
-            item.setPrecioUnitario(d.getPrecioUnitario());
             item.setCantidad(d.getCantidad());
             item.setSubtotal(d.getSubtotal());
-            item.setObservaciones(d.getObservaciones());
-            detalles.add(item);
-        }
-        r.setDetalles(detalles);
+            return item;
+        }).collect(Collectors.toList()));
+        
         return r;
-    }
-    // Corrección sintáctica interna para asegurar la encapsulación del total
-    private void setTotal(BigDecimal total) {
-        // Método auxiliar si el DTO requiere mapeo interno estricto
     }
 }
