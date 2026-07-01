@@ -26,6 +26,11 @@ public class PedidoResponseDTO {
     private String responsableNombre; // Quién atendió (Sheyla, Rolando, etc.)
     private String responsableRol;    // "Mesero", "Repartidor" o "Venta Directa"
     private String usuarioNombre; // <--- AGREGA ESTO de vuelta para que desaparezcan los errores en tu mapper
+    
+    // ─── NUEVOS CAMPOS PARA EL REPARTIDOR ───────────────────────────────────
+    private String direccion;
+    private String urlMaps;
+    
 // ...
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime fechaCreacion;
