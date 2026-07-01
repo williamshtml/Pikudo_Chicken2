@@ -6,18 +6,21 @@ import com.pikudo.entity.Categoria;
 import com.pikudo.repository.CategoriaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 
 public class CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
 
     // ─── CREAR ────────────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public CategoriaResponseDTO crear(CategoriaRequestDTO dto) {
         Categoria categoria = Categoria.builder()
                 .nombre(dto.getNombre())
@@ -42,6 +45,7 @@ public class CategoriaService {
     }
 
     // ─── ACTUALIZAR ───────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public CategoriaResponseDTO actualizar(Long id, CategoriaRequestDTO dto) {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + id));
@@ -51,6 +55,7 @@ public class CategoriaService {
     }
 
     // ─── ELIMINAR LÓGICO (estado = false) ────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public void eliminar(Long id) {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + id));

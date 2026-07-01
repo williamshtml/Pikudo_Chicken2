@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.service;
 
 import com.pikudo.dto.producto.ProductoRequestDTO;
@@ -12,18 +8,21 @@ import com.pikudo.repository.CategoriaRepository;
 import com.pikudo.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
 
     // ─── CREAR ────────────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public ProductoResponseDTO crear(ProductoRequestDTO dto) {
         Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + dto.getCategoriaId()));
@@ -70,6 +69,7 @@ public class ProductoService {
     }
 
     // ─── ACTUALIZAR ───────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public ProductoResponseDTO actualizar(Long id, ProductoRequestDTO dto) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
@@ -86,6 +86,7 @@ public class ProductoService {
     }
 
     // ─── DESACTIVAR (estado = false, ocultar de la carta) ─────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public void desactivar(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
@@ -94,6 +95,7 @@ public class ProductoService {
     }
 
     // ─── REACTIVAR (estado = true, volver a mostrar en la carta) ──────────────
+    @Transactional(rollbackFor = Exception.class)
     public void reactivar(Long id) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));

@@ -13,8 +13,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
+
 public class AuthService {
     
     private final UsuarioRepository usuarioRepository;
@@ -42,6 +46,7 @@ public class AuthService {
         );
     }
     // ─── REGISTRO ─────────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public AuthResponseDTO register(RegisterRequestDTO dto) {
         if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso");

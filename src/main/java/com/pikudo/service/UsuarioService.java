@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.service;
 
 import com.pikudo.dto.usuario.UsuarioRequestDTO;
@@ -13,20 +9,21 @@ import com.pikudo.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UsuarioService {
-
-
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ─── CREAR ────────────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class) // 👈 2. Escritura: Asegura rollback total si algo falla al guardar
     public UsuarioResponseDTO crear(UsuarioRequestDTO dto) {
         if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso");
@@ -45,6 +42,7 @@ public class UsuarioService {
     }
 
     // ─── LISTAR ACTIVOS ───────────────────────────────────────────────────────
+    // Hereda automáticamente 'readOnly = true'
     public List<UsuarioResponseDTO> listarActivos() {
         return usuarioRepository.findByEstadoTrue()
                 .stream()
@@ -53,6 +51,7 @@ public class UsuarioService {
     }
 
     // ─── LISTAR TODOS ─────────────────────────────────────────────────────────
+    // Hereda automáticamente 'readOnly = true'
     public List<UsuarioResponseDTO> listarTodos() {
         return usuarioRepository.findAll()
                 .stream()
@@ -61,6 +60,7 @@ public class UsuarioService {
     }
 
     // ─── BUSCAR POR ID ────────────────────────────────────────────────────────
+    // Hereda automáticamente 'readOnly = true'
     public UsuarioResponseDTO buscarPorId(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
@@ -68,6 +68,7 @@ public class UsuarioService {
     }
 
     // ─── ACTUALIZAR ───────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class) // 👈 Escritura: Modificación segura de credenciales
     public UsuarioResponseDTO actualizar(Long id, UsuarioRequestDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
@@ -83,6 +84,7 @@ public class UsuarioService {
     }
 
     // ─── DESACTIVAR (estado = false) ──────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class) // 👈 Escritura: Persistencia segura del cambio de estado
     public void desactivar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));

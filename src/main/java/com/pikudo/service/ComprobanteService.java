@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.service;
 
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
@@ -21,6 +17,7 @@ import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ComprobanteService {
 
     private final ComprobanteRepository comprobanteRepository;
@@ -30,7 +27,7 @@ public class ComprobanteService {
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     // ─── EMITIR COMPROBANTE (cierra y cobra el pedido) ────────────────────────
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ComprobanteResponseDTO emitir(ComprobanteRequestDTO dto) {
         Pedido pedido = pedidoRepository.findById(dto.getPedidoId())
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado con id: " + dto.getPedidoId()));

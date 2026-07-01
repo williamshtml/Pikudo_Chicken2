@@ -2,14 +2,16 @@ package com.pikudo.service;
 
 import com.pikudo.dto.sunat.SunatRucRequestDTO;
 import com.pikudo.dto.sunat.SunatRucResponseDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 public class ConsultaRucService {
-
-    // Cliente HTTP nativo de Spring Web, ideal para el flujo tradicional de tu API
-    private final RestTemplate restTemplate = new RestTemplate(); 
+    @Autowired
+    // 🛠️ CORRECCIÓN: Inyectamos el RestTemplate administrado por Spring. 
+    // Esto asegura que use las políticas de timeout de tu 'RestTemplateConfig.java'.
+    private RestTemplate restTemplate;
     
     // URL base de la API gratuita de apis.net.pe para el padrón de SUNAT
     private final String BASE_URL = "https://api.apis.net.pe/v2/sunat/ruc?numero=";

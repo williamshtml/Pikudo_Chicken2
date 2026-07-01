@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.service;
 
 import com.pikudo.dto.mesa.MesaRequestDTO;
@@ -10,18 +6,21 @@ import com.pikudo.entity.Mesa;
 import com.pikudo.repository.MesaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 
 public class MesaService {
 
     private final MesaRepository mesaRepository;
 
     // ─── CREAR ────────────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public MesaResponseDTO crear(MesaRequestDTO dto) {
         Mesa mesa = Mesa.builder()
                 .numero(dto.getNumero())
@@ -54,6 +53,7 @@ public class MesaService {
     }
 
     // ─── ACTUALIZAR ───────────────────────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public MesaResponseDTO actualizar(Long id, MesaRequestDTO dto) {
         Mesa mesa = mesaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mesa no encontrada con id: " + id));
@@ -63,6 +63,7 @@ public class MesaService {
     }
 
     // ─── DESACTIVAR (estado = false) ──────────────────────────────────────────
+    @Transactional(rollbackFor = Exception.class)
     public void desactivar(Long id) {
         Mesa mesa = mesaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mesa no encontrada con id: " + id));
