@@ -28,6 +28,9 @@ public class PedidoRequestDTO {
     // Agregamos este campo esencial para saber cómo procesar el pedido en el mapper
     @NotNull(message = "El tipo de pedido es obligatorio (MESA, DELIVERY)")
     private String tipoPedido;
+    
+    // ─── NUEVO: Dirección de despacho ────────────────────────────────────────
+    private String direccion;
 
     @Valid
     @NotNull(message = "El pedido debe tener al menos un detalle")
