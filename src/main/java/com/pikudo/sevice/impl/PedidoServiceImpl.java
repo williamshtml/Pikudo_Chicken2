@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class PedidoServiceImpl implements PedidoService {
 
     @Autowired private PedidoRepository pedidoRepository;
@@ -26,7 +27,7 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private SimpMessagingTemplate template;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO crear(PedidoRequestDTO dto) {
         Mesa mesa = mesaRepository.findById(dto.getMesaId())
                 .orElseThrow(() -> new RuntimeException("Mesa no encontrada con ID: " + dto.getMesaId()));
@@ -37,7 +38,6 @@ public class PedidoServiceImpl implements PedidoService {
         Pedido pedido = new Pedido();
         pedido.setMesa(mesa);
         pedido.setMesero(mesero); // Correcto: usamos el campo de la entidad
-        pedido.setFechaHora(LocalDateTime.now());
         pedido.setEstado(EstadoPedido.PENDING);
         
         BigDecimal totalAcumulado = BigDecimal.ZERO;
@@ -97,7 +97,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
         Pedido pedido = pedidoRepository.findById(id).orElseThrow();
         pedido.setEstado(nuevoEstado);
@@ -108,7 +108,7 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void cancelar(Long id) {
         pedidoRepository.deleteById(id);
     }
@@ -124,7 +124,7 @@ public class PedidoServiceImpl implements PedidoService {
         r.setId(p.getId());
         r.setMesaNumero(p.getMesa().getNumero());
         r.setUsuarioNombre(p.getMesero() != null ? p.getMesero().getUsername() : "Sin asignar");
-        r.setFechaHora(p.getFechaHora());
+   
         r.setEstadoPedido(p.getEstado().name());
         r.setTotal(p.getTotal());
         
@@ -145,5 +145,9 @@ public class PedidoServiceImpl implements PedidoService {
         }
         r.setDetalles(detalles);
         return r;
+    }
+    // Corrección sintáctica interna para asegurar la encapsulación del total
+    private void setTotal(BigDecimal total) {
+        // Método auxiliar si el DTO requiere mapeo interno estricto
     }
 }

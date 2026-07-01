@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Pedido {
+public class Pedido extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,19 +26,17 @@ public class Pedido {
     @JoinColumn(name = "mesa_id", nullable = false)
     private Mesa mesa;
 
-    // EL CAMBIO AQUÍ: 
-    // Separamos el Mesero (quien atiende) del Cajero (quien cobra)
+    // Relación con el mesero que atiende
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "mesero_id") // Relación con el mesero
+    @JoinColumn(name = "mesero_id")
     private Usuario mesero;
 
+    // Relación con el cajero que realiza el cobro
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "cajero_id") // Relación con el cajero
+    @JoinColumn(name = "cajero_id")
     private Usuario cajero;
 
-    @Builder.Default
-    @Column(name = "fecha_hora", nullable = false)
-    private LocalDateTime fechaHora = LocalDateTime.now();
+    // Nota: 'fechaCreacion' se hereda de Auditable, no es necesario declararlo aquí.
 
     @NotNull(message = "El total es obligatorio")
     @PositiveOrZero
