@@ -4,7 +4,7 @@ import com.pikudo.dto.tracking.RepartidorEstadoDTO;
 import com.pikudo.entity.Rol.TipoRol;
 import com.pikudo.entity.Usuario;
 import com.pikudo.repository.UsuarioRepository;
-import com.pikudo.service.impl.PresenciaRepartidorService;
+import com.pikudo.service.impl.PresenciaRepartidorServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +19,7 @@ import java.util.List;
 public class RepartidorController {
 
     private final UsuarioRepository usuarioRepository;
-    private final PresenciaRepartidorService presenciaService;
+    private final PresenciaRepartidorServiceImpl presenciaService;
 
     /**
      * Carga inicial del panel de caja: todos los usuarios con rol MOTORIZADO,

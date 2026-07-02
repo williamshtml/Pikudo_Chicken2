@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PresenciaRepartidorService {
+public class PresenciaRepartidorServiceImpl {
 
     private final SimpMessagingTemplate messagingTemplate;
 

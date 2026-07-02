@@ -4,7 +4,7 @@ import com.pikudo.dto.tracking.UbicacionDTO;
 import com.pikudo.dto.tracking.UbicacionEntranteDTO;
 import com.pikudo.entity.Usuario;
 import com.pikudo.repository.UsuarioRepository;
-import com.pikudo.service.impl.PresenciaRepartidorService;
+import com.pikudo.service.impl.PresenciaRepartidorServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -27,7 +27,7 @@ import java.security.Principal;
 public class TrackingController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final PresenciaRepartidorService presenciaService;
+    private final PresenciaRepartidorServiceImpl presenciaService;
     private final UsuarioRepository usuarioRepository;
 
     /**

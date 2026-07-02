@@ -1,5 +1,6 @@
 package com.pikudo.entity;
 
+import jakarta.persistence.Index;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Id;
@@ -24,7 +25,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "comprobantes")
+@Table(name = "comprobantes", indexes = {
+    @Index(name = "idx_serie_correlativo", columnList = "serie, correlativo", unique = true)
+})
 @Getter
 @Setter
 @NoArgsConstructor
