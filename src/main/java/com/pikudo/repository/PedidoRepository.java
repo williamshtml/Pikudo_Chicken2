@@ -36,4 +36,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
            "GROUP BY HOUR(p.fechaCreacion) " +
            "ORDER BY HOUR(p.fechaCreacion) ASC")
     List<FlujoHorarioDTO> findFlujoHorarioPorRango(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+    
+    @Query("SELECT SUM(p.total) FROM Pedido p WHERE p.estado = 'PAID' AND p.metodoPago.tipo = :tipoMetodo AND p.fechaCreacion BETWEEN :desde AND :hasta")
+    BigDecimal calcularTotalVentasPorMetodoTipo(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta, @Param("tipoMetodo") String tipoMetodo);
 }
