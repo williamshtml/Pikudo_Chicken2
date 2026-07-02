@@ -57,5 +57,4 @@ public class MovimientoInventario extends Auditable {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario; // Quién registró físicamente el movimiento
     
-    public enum TipoMovimiento { INGRESO, EGRESO }
 }
