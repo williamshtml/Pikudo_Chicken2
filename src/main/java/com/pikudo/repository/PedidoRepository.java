@@ -5,6 +5,12 @@ import com.pikudo.entity.EstadoPedido;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import com.pikudo.dto.reporte.ReporteDTO.ProductoMasVendidoDTO;
+import com.pikudo.dto.reporte.ReporteDTO.FlujoHorarioDTO;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
@@ -13,4 +19,21 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     
     // Para saber qué órdenes tiene abiertas una mesa específica
     List<Pedido> findByMesaIdAndEstadoNot(Long mesaId, EstadoPedido estado);
+    
+    @Query("SELECT SUM(p.total) FROM Pedido p WHERE p.estado = 'PAID' AND p.fechaCreacion BETWEEN :desde AND :hasta")
+    BigDecimal calcularTotalVentasPorRango(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT new com.pikudo.dto.reporte.ReporteDTO$ProductoMasVendidoDTO(d.producto.nombre, SUM(d.cantidad), SUM(d.subtotal)) " +
+           "FROM Pedido p JOIN p.detalles d " +
+           "WHERE p.estado = 'PAID' AND p.fechaCreacion BETWEEN :desde AND :hasta " +
+           "GROUP BY d.producto.nombre " +
+           "ORDER BY SUM(d.cantidad) DESC")
+    List<ProductoMasVendidoDTO> findProductosMasVendidos(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    @Query("SELECT new com.pikudo.dto.reporte.ReporteDTO$FlujoHorarioDTO(HOUR(p.fechaCreacion), COUNT(p)) " +
+           "FROM Pedido p " +
+           "WHERE p.fechaCreacion BETWEEN :desde AND :hasta " +
+           "GROUP BY HOUR(p.fechaCreacion) " +
+           "ORDER BY HOUR(p.fechaCreacion) ASC")
+    List<FlujoHorarioDTO> findFlujoHorarioPorRango(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 }
