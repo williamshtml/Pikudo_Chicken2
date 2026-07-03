@@ -1,5 +1,6 @@
-package com.pikudo.service.caja.impl;
+package com.pikudo.service.impl;
 
+import com.pikudo.mapper.CajaMapper;
 import com.pikudo.dto.caja.CajaDTO;
 import com.pikudo.dto.caja.GastoDTO;
 import com.pikudo.dto.caja.MetodoPagoDTO;
@@ -11,7 +12,7 @@ import com.pikudo.repository.GastoRepository;
 import com.pikudo.repository.MetodoPagoRepository; // Asegúrate de tener este repositorio básico creado
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.repository.UsuarioRepository;
-import com.pikudo.service.caja.CajaService;
+import com.pikudo.service.CajaService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,11 +34,11 @@ public class CajaServiceImpl implements CajaService {
     private final MetodoPagoRepository metodoPagoRepository;
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CajaMapper cajaMapper; // Inyectado
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CajaDTO abrirCaja(CajaDTO dto) {
-        // Verificar si ya existe una caja abierta para evitar duplicidad de turnos
         cajaRepository.findByEstado("ABIERTA").ifPresent(c -> {
             throw new RuntimeException("Ya existe un turno de caja abierto en el sistema");
         });
@@ -53,14 +54,14 @@ public class CajaServiceImpl implements CajaService {
                 .estado("ABIERTA")
                 .build();
 
-        return mapearCajaADto(cajaRepository.save(caja));
+        return cajaMapper.toCajaDTO(cajaRepository.save(caja));
     }
 
     @Override
     public CajaDTO obtenerTurnoActual() {
         Caja caja = cajaRepository.findByEstado("ABIERTA")
                 .orElseThrow(() -> new RuntimeException("No hay ninguna caja abierta en este momento"));
-        return mapearCajaADto(caja);
+        return cajaMapper.toCajaDTO(caja);
     }
 
     @Override
@@ -74,34 +75,22 @@ public class CajaServiceImpl implements CajaService {
         }
 
         LocalDateTime finTurno = LocalDateTime.now();
-
-        // 1. Calcular totales del período de caja usando consultas personalizadas
         BigDecimal efectivo = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "EFECTIVO");
         BigDecimal tarjeta = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "TARJETA");
         BigDecimal digital = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "DIGITAL");
         BigDecimal gastos = gastoRepository.calcularTotalGastosPorRango(caja.getFechaApertura(), finTurno);
 
-        // Validar nulos de base de datos
-        efectivo = (efectivo != null) ? efectivo : BigDecimal.ZERO;
-        tarjeta = (tarjeta != null) ? tarjeta : BigDecimal.ZERO;
-        digital = (digital != null) ? digital : BigDecimal.ZERO;
-        gastos = (gastos != null) ? gastos : BigDecimal.ZERO;
-
-        // 2. Sistema = Monto Inicial + Ventas Efectivo - Gastos
-        BigDecimal montoFinalSistema = caja.getMontoInicial().add(efectivo).subtract(gastos);
-
-        // 3. Actualizar la entidad
         caja.setFechaCierre(finTurno);
-        caja.setMontoVentasEfectivo(efectivo);
-        caja.setMontoVentasTarjeta(tarjeta);
-        caja.setMontoVentasDigital(digital);
-        caja.setMontoGastos(gastos);
-        caja.setMontoFinalSistema(montoFinalSistema);
-        caja.setMontoFinalReal(dto.getMontoFinalReal()); // Lo declarado físicamente por el cajero
+        caja.setMontoVentasEfectivo((efectivo != null) ? efectivo : BigDecimal.ZERO);
+        caja.setMontoVentasTarjeta((tarjeta != null) ? tarjeta : BigDecimal.ZERO);
+        caja.setMontoVentasDigital((digital != null) ? digital : BigDecimal.ZERO);
+        caja.setMontoGastos((gastos != null) ? gastos : BigDecimal.ZERO);
+        caja.setMontoFinalSistema(caja.getMontoInicial().add(caja.getMontoVentasEfectivo()).subtract(caja.getMontoGastos()));
+        caja.setMontoFinalReal(dto.getMontoFinalReal());
         caja.setObservaciones(dto.getObservaciones());
         caja.setEstado("CERRADA");
 
-        return mapearCajaADto(cajaRepository.save(caja));
+        return cajaMapper.toCajaDTO(cajaRepository.save(caja));
     }
 
     @Override
@@ -124,46 +113,20 @@ public class CajaServiceImpl implements CajaService {
                 .usuario(usuario)
                 .build();
 
-        return mapearGastoADto(gastoRepository.save(gasto));
+        return cajaMapper.toGastoDTO(gastoRepository.save(gasto));
     }
 
     @Override
     public List<GastoDTO> listarGastosPorTurno(Long cajaId) {
-        return gastoRepository.findByCajaId(cajaId)
-                .stream()
-                .map(this::mapearGastoADto)
+        return gastoRepository.findByCajaId(cajaId).stream()
+                .map(cajaMapper::toGastoDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<MetodoPagoDTO> listarMetodosPagoActivos() {
-        return metodoPagoRepository.findByActivoTrue()
-                .stream()
-                .map(mp -> MetodoPagoDTO.builder()
-                        .id(mp.getId()).nombre(mp.getNombre()).tipo(mp.getTipo()).activo(mp.getActivo())
-                        .build())
+        return metodoPagoRepository.findByActivoTrue().stream()
+                .map(cajaMapper::toMetodoPagoDTO)
                 .collect(Collectors.toList());
-    }
-
-    // --- MÉTODOS PRIVADOS DE MAPEO ---
-    private CajaDTO mapearCajaADto(Caja c) {
-        return CajaDTO.builder()
-                .id(c.getId())
-                .usuarioUsername(c.getUsuario() != null ? c.getUsuario().getUsername() : null)
-                .fechaApertura(c.getFechaApertura()).fechaCierre(c.getFechaCierre())
-                .montoInicial(c.getMontoInicial()).montoVentasEfectivo(c.getMontoVentasEfectivo())
-                .montoVentasTarjeta(c.getMontoVentasTarjeta()).montoVentasDigital(c.getMontoVentasDigital())
-                .montoGastos(c.getMontoGastos()).montoFinalSistema(c.getMontoFinalSistema())
-                .montoFinalReal(c.getMontoFinalReal()).observaciones(c.getObservaciones()).estado(c.getEstado())
-                .build();
-    }
-
-    private GastoDTO mapearGastoADto(Gasto g) {
-        return GastoDTO.builder()
-                .id(g.getId()).cajaTurnoId(g.getCaja().getId()).monto(g.getMonto())
-                .descripcion(g.getDescripcion())
-                .usuarioUsername(g.getUsuario() != null ? g.getUsuario().getUsername() : "SISTEMA")
-                .fechaCreacion(g.getFechaCreacion())
-                .build();
     }
 }

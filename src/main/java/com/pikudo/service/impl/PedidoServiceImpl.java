@@ -3,16 +3,18 @@ package com.pikudo.service.impl;
 import com.pikudo.dto.pedido.PedidoRequestDTO;
 import com.pikudo.dto.pedido.PedidoResponseDTO;
 import com.pikudo.entity.*;
+import com.pikudo.exception.ResourceNotFoundException;
+import com.pikudo.mapper.PedidoMapper;
 import com.pikudo.repository.*;
 import com.pikudo.service.PedidoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pikudo.service.impl.TicketPrinterServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -20,18 +22,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor // Nos ahorra los @Autowired
 @Transactional(readOnly = true)
 public class PedidoServiceImpl implements PedidoService {
 
-    @Autowired private PedidoRepository pedidoRepository;
-    @Autowired private ProductoRepository productoRepository;
-    @Autowired private UsuarioRepository usuarioRepository;
-    @Autowired private MesaRepository mesaRepository;
-    @Autowired private SimpMessagingTemplate template;
-
-    // Nuevas dependencias para impresion de tickets
-    @Autowired private TicketPrinterService ticketPrinterService;
-    @Autowired private ImpresoraRepository impresoraRepository;
+    private final PedidoRepository pedidoRepository;
+    private final ProductoRepository productoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final MesaRepository mesaRepository;
+    private final SimpMessagingTemplate template;
+    private final TicketPrinterServiceImpl ticketPrinterService;
+    private final ImpresoraRepository impresoraRepository;
+    private final PedidoMapper pedidoMapper; // Inyectamos el nuevo mapper
 
     // --- METODOS DE CREACION Y ESTADO ---
 
@@ -40,24 +42,22 @@ public class PedidoServiceImpl implements PedidoService {
     public PedidoResponseDTO crear(PedidoRequestDTO dto) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Usuario mesero = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Usuario de sesión no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario de sesión no encontrado"));
 
         Mesa mesa = (dto.getMesaId() != null) ? mesaRepository.findById(dto.getMesaId())
-                .orElseThrow(() -> new RuntimeException("Mesa no encontrada")) : null;
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con ID: " + dto.getMesaId())) : null;
 
         Pedido pedido = new Pedido();
         pedido.setMesa(mesa);
         pedido.setMesero(mesero);
 
-        // Si no hay mesa, asumimos por defecto que es para despacho externo
         String tipo = (dto.getTipoPedido() != null) ? dto.getTipoPedido().toUpperCase() : "MESA";
         pedido.setTipoPedido(tipo);
 
         if ("DELIVERY".equals(tipo)) {
-            pedido.setEstado(EstadoPedido.PENDING); // Inicialmente ingresa a cola
+            pedido.setEstado(EstadoPedido.PENDING);
             pedido.setDireccion(dto.getDireccion());
 
-            // Generación dinámica de la URL de navegación en Maps
             if (dto.getDireccion() != null && !dto.getDireccion().isBlank()) {
                 String urlFormateada = "https://www.google.com/maps/search/?api=1&query="
                         + URLEncoder.encode(dto.getDireccion(), StandardCharsets.UTF_8);
@@ -73,7 +73,7 @@ public class PedidoServiceImpl implements PedidoService {
         if (dto.getDetalles() != null) {
             for (PedidoRequestDTO.DetalleItemDTO itemDto : dto.getDetalles()) {
                 Producto producto = productoRepository.findById(itemDto.getProductoId())
-                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemDto.getProductoId()));
 
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
@@ -92,13 +92,10 @@ public class PedidoServiceImpl implements PedidoService {
 
         Pedido guardado = pedidoRepository.save(pedido);
 
-        // Imprime automaticamente los tickets de cocina/bar/horno segun la categoria de cada producto.
-        // Si una impresora esta apagada/desconectada, no rompe la creacion del pedido (ver TicketPrinterService).
         ticketPrinterService.imprimirTicketsPorArea(guardado);
 
-        PedidoResponseDTO response = mapearADto(guardado);
+        PedidoResponseDTO response = pedidoMapper.toDTO(guardado); // Usamos el mapper
 
-        // Si es Delivery, alertamos instantáneamente a todos los repartidores conectados
         if ("DELIVERY".equals(guardado.getTipoPedido())) {
             template.convertAndSend("/topic/repartidores", response);
         }
@@ -117,7 +114,7 @@ public class PedidoServiceImpl implements PedidoService {
 
         pedido.setEstado(nuevoEstado);
         Pedido actualizado = pedidoRepository.save(pedido);
-        PedidoResponseDTO response = mapearADto(actualizado);
+        PedidoResponseDTO response = pedidoMapper.toDTO(actualizado);
 
         template.convertAndSend("/topic/pedidos", response);
         return response;
@@ -135,91 +132,48 @@ public class PedidoServiceImpl implements PedidoService {
 
         Pedido guardado = pedidoRepository.save(p);
 
-        // Imprime la precuenta en la impresora de caja apenas el repartidor toma el pedido
         impresoraRepository.findByAreaAndActivaTrue(AreaPreparacion.CAJA)
                 .ifPresentOrElse(
                         impresoraCaja -> ticketPrinterService.imprimirPrecuentaDelivery(guardado, impresoraCaja),
-                        () -> { /* no hay impresora de caja configurada; no se rompe el flujo */ }
+                        () -> { /* silencioso */ }
                 );
 
-        PedidoResponseDTO response = mapearADto(guardado);
+        PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
 
-        // Notifica a la caja en tiempo real que el pedido cambió de estado y ya tiene repartidor
         template.convertAndSend("/topic/pedidos", response);
         return response;
     }
 
-    // --- METODOS DE CONSULTA (Se mantienen idénticos) ---
+    // --- METODOS DE CONSULTA ---
     @Override
-    public List<PedidoResponseDTO> listarTodos() { return pedidoRepository.findAll().stream().map(this::mapearADto).collect(Collectors.toList()); }
+    public List<PedidoResponseDTO> listarTodos() { 
+        return pedidoRepository.findAll().stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    }
 
     @Override
-    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) { return pedidoRepository.findByEstado(estado).stream().map(this::mapearADto).collect(Collectors.toList()); }
+    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) { 
+        return pedidoRepository.findByEstado(estado).stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    }
 
     @Override
-    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) { return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido).stream().map(this::mapearADto).collect(Collectors.toList()); }
+    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) { 
+        return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido).stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    }
 
     @Override
-    public PedidoResponseDTO buscarPorId(Long id) { return mapearADto(pedidoRepository.findById(id).orElseThrow()); }
+    public PedidoResponseDTO buscarPorId(Long id) { 
+        return pedidoMapper.toDTO(pedidoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"))); 
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelar(Long id) {
-        // Cambiado de deleteById() a cambio de estado: evita perder el historial
-        // y previene errores de integridad referencial si el pedido ya tiene
-        // un Comprobante u otras relaciones asociadas.
-        Pedido p = pedidoRepository.findById(id).orElseThrow();
+        Pedido p = pedidoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
         p.setEstado(EstadoPedido.CANCELLED);
         Pedido actualizado = pedidoRepository.save(p);
 
-        template.convertAndSend("/topic/pedidos", mapearADto(actualizado));
-    }
-
-    // --- MAPEO PRIVADO ---
-    private PedidoResponseDTO mapearADto(Pedido p) {
-        PedidoResponseDTO r = new PedidoResponseDTO();
-        r.setId(p.getId());
-        r.setMesaNumero(p.getMesa() != null ? p.getMesa().getNumero() : 0);
-        r.setTotal(p.getTotal());
-        r.setEstadoPedido(p.getEstado().name());
-
-        // Mapeo de campos de Delivery adicionales
-        r.setDireccion(p.getDireccion());
-        r.setUrlMaps(p.getUrlMaps());
-
-        r.setCajeroNombre(p.getCajero() != null ? p.getCajero().getUsername() : "Pendiente de Caja");
-
-        if ("MESA".equals(p.getTipoPedido())) {
-            r.setResponsableNombre(p.getMesero() != null ? p.getMesero().getUsername() : "N/A");
-            r.setResponsableRol("Mesero");
-        } else if ("DELIVERY".equals(p.getTipoPedido())) {
-            r.setResponsableNombre(p.getRepartidor() != null ? p.getRepartidor().getUsername() : "Por asignar");
-            r.setResponsableRol("Repartidor");
-        } else {
-            r.setResponsableNombre("Mostrador");
-            r.setResponsableRol("Venta Directa");
-        }
-
-        BigDecimal neto = p.getTotal().divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
-        r.setSubtotalNeto(neto);
-        r.setIgv(p.getTotal().subtract(neto));
-
-        r.setDetalles(p.getDetalles().stream().map(d -> {
-            PedidoResponseDTO.DetalleItemDTO item = new PedidoResponseDTO.DetalleItemDTO();
-            item.setId(d.getId());
-            item.setProductoNombre(d.getProducto().getNombre());
-            item.setPrecioUnitario(d.getPrecioUnitario());
-            item.setCantidad(d.getCantidad());
-            item.setSubtotal(d.getSubtotal());
-            item.setObservaciones(d.getObservaciones());
-            return item;
-        }).collect(Collectors.toList()));
-
-        // Mapeo seguro de fecha heredada de Auditable
-        if (p.getFechaCreacion() != null) {
-            r.setFechaCreacion(p.getFechaCreacion());
-        }
-
-        return r;
+        template.convertAndSend("/topic/pedidos", pedidoMapper.toDTO(actualizado));
     }
 }

@@ -1,7 +1,7 @@
 package com.pikudo.service;
 
-import com.pikudo.dto.cateogira.CategoriaRequestDTO;
-import com.pikudo.dto.cateogira.CategoriaResponseDTO;
+import com.pikudo.dto.categoria.CategoriaRequestDTO;
+import com.pikudo.dto.categoria.CategoriaResponseDTO;
 import java.util.List;
 
 public interface CategoriaService {

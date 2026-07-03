@@ -1,4 +1,4 @@
-package com.pikudo.dto.cateogira;
+package com.pikudo.dto.categoria;
 
 import lombok.Getter;
 import lombok.Setter;

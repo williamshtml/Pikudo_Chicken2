@@ -1,4 +1,4 @@
-package com.pikudo.service.caja;
+package com.pikudo.service;
 
 import com.pikudo.dto.caja.CajaDTO;
 import com.pikudo.dto.caja.GastoDTO;

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class TicketPrinterService {
+public class TicketPrinterServiceImpl {
 
     private final ImpresoraRepository impresoraRepository;
 

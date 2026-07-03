@@ -1,4 +1,4 @@
-package com.pikudo.service.inventario;
+package com.pikudo.service;
 
 import com.pikudo.dto.inventario.InsumoDTO;
 import com.pikudo.dto.inventario.MovimientoInventarioDTO;

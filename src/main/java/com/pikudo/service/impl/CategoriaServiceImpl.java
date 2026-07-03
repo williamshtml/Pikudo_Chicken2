@@ -1,8 +1,9 @@
 package com.pikudo.service.impl;
 
 import com.pikudo.service.CategoriaService;
-import com.pikudo.dto.cateogira.CategoriaRequestDTO;
-import com.pikudo.dto.cateogira.CategoriaResponseDTO;
+import com.pikudo.mapper.CategoriaMapper; // Importa el mapper
+import com.pikudo.dto.categoria.CategoriaRequestDTO;
+import com.pikudo.dto.categoria.CategoriaResponseDTO;
 import com.pikudo.entity.Categoria;
 import com.pikudo.repository.CategoriaRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,21 +18,23 @@ import java.util.stream.Collectors;
 public class CategoriaServiceImpl implements CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
+    private final CategoriaMapper categoriaMapper; // Inyectado
 
     @Override
     @Transactional
     public CategoriaResponseDTO crear(CategoriaRequestDTO dto) {
         Categoria categoria = Categoria.builder()
                 .nombre(dto.getNombre())
+                .estado(true) // Buena práctica: inicializar en true
                 .build();
-        return toDTO(categoriaRepository.save(categoria));
+        return categoriaMapper.toDTO(categoriaRepository.save(categoria));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CategoriaResponseDTO> listarTodas() {
         return categoriaRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(categoriaMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -40,7 +43,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     public CategoriaResponseDTO buscarPorId(Long id) {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + id));
-        return toDTO(categoria);
+        return categoriaMapper.toDTO(categoria);
     }
 
     @Override
@@ -49,7 +52,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         Categoria categoria = categoriaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + id));
         categoria.setNombre(dto.getNombre());
-        return toDTO(categoriaRepository.save(categoria));
+        return categoriaMapper.toDTO(categoriaRepository.save(categoria));
     }
 
     @Override
@@ -59,13 +62,5 @@ public class CategoriaServiceImpl implements CategoriaService {
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + id));
         categoria.setEstado(false);
         categoriaRepository.save(categoria);
-    }
-
-    private CategoriaResponseDTO toDTO(Categoria c) {
-        return new CategoriaResponseDTO(
-                c.getId(),
-                c.getNombre(),
-                null // 'descripcion' no existe en Entity, mantenemos null
-        );
     }
 }

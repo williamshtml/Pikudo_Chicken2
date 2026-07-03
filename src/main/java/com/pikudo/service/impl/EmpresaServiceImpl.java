@@ -2,12 +2,14 @@ package com.pikudo.service.impl;
 
 import com.pikudo.entity.ConfiguracionEmpresa;
 import com.pikudo.repository.EmpresaRepository;
-import com.pikudo.service.EmpresaService; // Importamos la interfaz
-import org.springframework.stereotype.Service;
+import com.pikudo.service.EmpresaService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EmpresaServiceImpl implements EmpresaService {
 
     private final EmpresaRepository empresaRepository;
@@ -15,6 +17,8 @@ public class EmpresaServiceImpl implements EmpresaService {
     @Override
     public ConfiguracionEmpresa getDatosEmpresa() {
         return empresaRepository.findById(1L)
-                .orElseThrow(() -> new RuntimeException("Configuración de empresa no encontrada. Asegúrese de insertar un registro con ID 1 en la tabla configuracion_empresa."));
+                .orElseThrow(() -> new RuntimeException(
+                    "Configuración de empresa no encontrada. Asegúrese de insertar un registro con ID 1 en la tabla configuracion_empresa."
+                ));
     }
 }

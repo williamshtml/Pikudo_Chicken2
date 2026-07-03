@@ -1,4 +1,4 @@
-package com.pikudo.dto.cateogira;
+package com.pikudo.dto.categoria;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

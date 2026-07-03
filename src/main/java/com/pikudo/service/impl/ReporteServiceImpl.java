@@ -1,8 +1,9 @@
 package com.pikudo.service.impl;
 
 import com.pikudo.dto.reporte.ReporteDTO.*;
+import com.pikudo.mapper.ReporteMapper;
 import com.pikudo.repository.PedidoRepository;
-import com.pikudo.repository.GastoRepository; // Asumiendo que existe el repositorio de Gasto
+import com.pikudo.repository.GastoRepository;
 import com.pikudo.service.ReporteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,41 +22,32 @@ public class ReporteServiceImpl implements ReporteService {
 
     private final PedidoRepository pedidoRepository;
     private final GastoRepository gastoRepository;
+    private final ReporteMapper reporteMapper; // Inyectamos el mapper
 
     @Override
     public UtilidadNetaDTO obtenerUtilidadDelDia(LocalDate fecha) {
-        LocalDateTime inicioDia = fecha.atStartOfDay();
-        LocalDateTime finDia = fecha.atTime(LocalTime.MAX);
+        LocalDateTime inicio = fecha.atStartOfDay();
+        LocalDateTime fin = fecha.atTime(LocalTime.MAX);
 
-        // 1. Calcular total de ventas cobradas (Estado PAID, por ejemplo)
-        BigDecimal totalVentas = pedidoRepository.calcularTotalVentasPorRango(inicioDia, finDia);
-        if (totalVentas == null) totalVentas = BigDecimal.ZERO;
+        BigDecimal ventas = pedidoRepository.calcularTotalVentasPorRango(inicio, fin);
+        BigDecimal gastos = gastoRepository.calcularTotalGastosPorRango(inicio, fin);
 
-        // 2. Calcular total de gastos registrados en ese turno/día
-        BigDecimal totalGastos = gastoRepository.calcularTotalGastosPorRango(inicioDia, finDia);
-        if (totalGastos == null) totalGastos = BigDecimal.ZERO;
-
-        // 3. Utilidad Neta = Ventas - Gastos
-        BigDecimal utilidadNeta = totalVentas.subtract(totalGastos);
-
-        return new UtilidadNetaDTO(totalVentas, totalGastos, utilidadNeta);
+        // Si es null, lo tratamos como 0 antes de pasar al mapper
+        return reporteMapper.toUtilidadDTO(
+            ventas != null ? ventas : BigDecimal.ZERO, 
+            gastos != null ? gastos : BigDecimal.ZERO
+        );
     }
 
+    // Estos métodos ya devuelven una lista de DTOs directamente desde el Repository,
+    // lo cual está bien si tus JPQL ya mapean el resultado.
     @Override
     public List<ProductoMasVendidoDTO> obtenerProductosMasVendidos(LocalDate inicio, LocalDate fin) {
-        LocalDateTime desde = inicio.atStartOfDay();
-        LocalDateTime hasta = fin.atTime(LocalTime.MAX);
-        
-        // Delegamos la agrupación y ordenamiento directo a la base de datos
-        return pedidoRepository.findProductosMasVendidos(desde, hasta);
+        return pedidoRepository.findProductosMasVendidos(inicio.atStartOfDay(), fin.atTime(LocalTime.MAX));
     }
 
     @Override
     public List<FlujoHorarioDTO> obtenerFlujoHorarioPorFecha(LocalDate fecha) {
-        LocalDateTime desde = fecha.atStartOfDay();
-        LocalDateTime hasta = fecha.atTime(LocalTime.MAX);
-        
-        // Agrupa los pedidos usando la función HOUR() de JPQL
-        return pedidoRepository.findFlujoHorarioPorRango(desde, hasta);
+        return pedidoRepository.findFlujoHorarioPorRango(fecha.atStartOfDay(), fecha.atTime(LocalTime.MAX));
     }
 }

@@ -2,51 +2,35 @@ package com.pikudo.mapper;
 
 import com.pikudo.dto.producto.ProductoRequestDTO;
 import com.pikudo.dto.producto.ProductoResponseDTO;
-import com.pikudo.entity.Producto;
 import com.pikudo.entity.Categoria;
+import com.pikudo.entity.Producto;
 import org.springframework.stereotype.Component;
 
 @Component
-
 public class ProductoMapper {
-    /*
-     Traduce el RequestDTO (Frontend) a la Entidad (Base de Datos).
-     Requiere el objeto Categoria previamente recuperado de la base de datos mediante su ID.
-     */
-    public Producto toEntity(ProductoRequestDTO dto, Categoria categoria) {
-        if (dto == null) {
-            return null;
-        }
 
+    public ProductoResponseDTO toDTO(Producto p) {
+        if (p == null) return null;
+        
+        ProductoResponseDTO response = new ProductoResponseDTO();
+        response.setId(p.getId());
+        response.setNombre(p.getNombre());
+        response.setPrecio(p.getPrecio());
+        response.setStock(p.getStock());
+        response.setEstado(p.getEstado());
+        response.setCategoriaNombre(p.getCategoria() != null ? p.getCategoria().getNombre() : null);
+        return response;
+    }
+
+    public Producto toEntity(ProductoRequestDTO dto, Categoria categoria) {
+        if (dto == null) return null;
+        
         return Producto.builder()
                 .nombre(dto.getNombre())
                 .precio(dto.getPrecio())
                 .stock(dto.getStock())
                 .categoria(categoria)
+                .estado(true) // Por defecto nuevo producto activo
                 .build();
-    }
-
-    /*
-     Traduce la Entidad (Base de Datos) al ResponseDTO (Frontend).
-     Mapea el nombre de la categoría de forma segura para evitar excepciones de puntero nulo.
-     */
-    public ProductoResponseDTO toResponseDTO(Producto entity) {
-        if (entity == null) {
-            return null;
-        }
-
-        ProductoResponseDTO response = new ProductoResponseDTO();
-        response.setId(entity.getId());
-        response.setNombre(entity.getNombre());
-        response.setPrecio(entity.getPrecio());
-        response.setStock(entity.getStock());
-        response.setEstado(entity.getEstado());
-
-        // Controlamos de forma segura si el producto tiene asignada una categoría
-        if (entity.getCategoria() != null) {
-            response.setCategoriaNombre(entity.getCategoria().getNombre());
-        }
-
-        return response;
     }
 }

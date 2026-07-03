@@ -1,5 +1,6 @@
 package com.pikudo.service.impl;
 
+import com.pikudo.mapper.AuthMapper; // Importa el mapper
 import com.pikudo.service.AuthService;
 import com.pikudo.dto.auth.AuthResponseDTO;
 import com.pikudo.dto.auth.LoginRequestDTO;
@@ -25,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final AuthMapper authMapper; // Inyectado
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO dto) {
@@ -37,13 +39,8 @@ public class AuthServiceImpl implements AuthService {
 
         String token = jwtService.generateToken(usuario);
 
-        return new AuthResponseDTO(
-                usuario.getId(),
-                usuario.getUsername(),
-                usuario.getUsername(),
-                usuario.getRol().getNombre().name(),
-                token
-        );
+        // Ahora usamos el mapper
+        return authMapper.toAuthResponse(usuario, token);
     }
 
     @Override
@@ -65,12 +62,7 @@ public class AuthServiceImpl implements AuthService {
         Usuario guardado = usuarioRepository.save(usuario);
         String token = jwtService.generateToken(guardado);
 
-        return new AuthResponseDTO(
-                guardado.getId(),
-                guardado.getUsername(),
-                guardado.getUsername(),
-                guardado.getRol().getNombre().name(),
-                token
-        );
+        // Ahora usamos el mapper
+        return authMapper.toAuthResponse(guardado, token);
     }
 }

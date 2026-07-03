@@ -1,7 +1,6 @@
 package com.pikudo.controller;
 
-import com.pikudo.dto.empresa.EmpresaDTO;
-import com.pikudo.mapper.EmpresaMapper;
+import com.pikudo.entity.ConfiguracionEmpresa;
 import com.pikudo.service.EmpresaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,24 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class EmpresaController {
 
     private final EmpresaService empresaService;
-    private final EmpresaMapper empresaMapper;
 
     @GetMapping
-    public ResponseEntity<EmpresaDTO> obtenerDatosEmpresa() {
-        // 1. Buscamos la entidad en la base de datos usando el servicio
-        var empresa = empresaService.getDatosEmpresa();
-        
-        // 2. Lo convertimos a DTO con el mapper y lo mandamos al frontend
-        return ResponseEntity.ok(empresaMapper.toDTO(empresa));
+    public ResponseEntity<ConfiguracionEmpresa> obtenerDatosEmpresa() {
+        // Buscamos la entidad en la base de datos usando el servicio
+        // y la mandamos directamente al frontend sin usar mappers
+        return ResponseEntity.ok(empresaService.getDatosEmpresa());
     }
 
-    /* * Más adelante, cuando quieras guardar cambios desde la web, 
-     * puedes descomentar esto y agregar el método de actualizar en tu EmpresaService.
-     *
-     * @PutMapping
-     * public ResponseEntity<EmpresaDTO> actualizarDatosEmpresa(@Valid @RequestBody EmpresaDTO dto) {
-     * var empresaActualizada = empresaService.actualizarEmpresa(dto);
-     * return ResponseEntity.ok(empresaMapper.toDTO(empresaActualizada));
-     * }
+    /* 
+     * Más adelante, cuando quieras guardar cambios desde la web,
+     * puedes agregar el método de actualizar aquí recibiendo y 
+     * devolviendo directamente ConfiguracionEmpresa.
      */
 }
