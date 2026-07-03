@@ -13,6 +13,7 @@ import com.pikudo.repository.MetodoPagoRepository; // Asegúrate de tener este r
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.repository.UsuarioRepository;
 import com.pikudo.service.CajaService;
+import com.pikudo.service.TicketPrinterService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,6 +36,7 @@ public class CajaServiceImpl implements CajaService {
     private final PedidoRepository pedidoRepository;
     private final UsuarioRepository usuarioRepository;
     private final CajaMapper cajaMapper; // Inyectado
+    private final TicketPrinterService ticketPrinterService; // Nuevo: para imprimir el reporte de cierre
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,7 +92,13 @@ public class CajaServiceImpl implements CajaService {
         caja.setObservaciones(dto.getObservaciones());
         caja.setEstado("CERRADA");
 
-        return cajaMapper.toCajaDTO(cajaRepository.save(caja));
+        Caja cerrada = cajaRepository.save(caja);
+
+        // Imprime el ticket de cierre de caja (reporte de turno) apenas se cierra.
+        // Si la impresora esta apagada/desconectada, no rompe el cierre (ver MotorImpresionImpl).
+        ticketPrinterService.imprimirReporteCierreCaja(cerrada);
+
+        return cajaMapper.toCajaDTO(cerrada);
     }
 
     @Override
