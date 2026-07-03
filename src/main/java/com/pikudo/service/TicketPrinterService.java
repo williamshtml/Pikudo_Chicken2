@@ -1,13 +1,14 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.pikudo.service;
 
-/**
- *
- * @author willi
- */
-public class TicketPrinterService {
-    
+import com.pikudo.entity.Comprobante;
+import com.pikudo.entity.Impresora;
+import com.pikudo.entity.Pedido;
+import com.pikudo.entity.caja.Caja;
+
+public interface TicketPrinterService {
+    void imprimirTicketsPorArea(Pedido pedido);
+    void imprimirPrecuentaDelivery(Pedido pedido, Impresora impresoraCaja);
+    void imprimirBoleta(Comprobante comprobante);
+    void imprimirFactura(Comprobante comprobante);
+    void imprimirReporteCierreCaja(Caja caja);
 }

@@ -1,5 +1,4 @@
 package com.pikudo.entity;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 // Importaciones específicas, nada de asteriscos
@@ -8,11 +7,9 @@ import lombok.Setter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-
 @Entity
 @Table(name = "pedidos")
 @Getter 
@@ -21,32 +18,25 @@ import java.util.List;
 @NoArgsConstructor // Muy útil para JPA sin ensuciar
 @AllArgsConstructor
 public class Pedido extends Auditable {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mesa_id")
     private Mesa mesa;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mesero_id")
     private Usuario mesero;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cajero_id")
     private Usuario cajero;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repartidor_id")
     private Usuario repartidor;
-
     @Builder.Default
     @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
-
     @Builder.Default
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -64,9 +54,15 @@ public class Pedido extends Auditable {
     // ─── CAMPOS ADICIONALES PARA DELIVERY ────────────────────────────────────
     @Column(name = "direccion", length = 255)
     private String direccion;
-
     @Column(name = "url_maps", length = 500)
     private String urlMaps;
+
+    // ─── NUEVO: datos de contacto/nota del cliente (vistos en el ticket fisico) ──
+    @Column(name = "telefono_cliente", length = 20)
+    private String telefonoCliente;
+
+    @Column(name = "observaciones_pedido", length = 250)
+    private String observacionesPedido; // Ej: "VISA, VINAGRETA" o "Paga con 50 soles"
 
     @Builder.Default // Necesario para que el builder respete el ArrayList vacío
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
