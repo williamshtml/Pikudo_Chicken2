@@ -1,4 +1,5 @@
 package com.pikudo.entity;
+import com.pikudo.entity.caja.MetodoPago;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 // Importaciones específicas, nada de asteriscos
@@ -57,12 +58,18 @@ public class Pedido extends Auditable {
     @Column(name = "url_maps", length = 500)
     private String urlMaps;
 
-    // ─── NUEVO: datos de contacto/nota del cliente (vistos en el ticket fisico) ──
+    // ─── datos de contacto/nota del cliente ──
     @Column(name = "telefono_cliente", length = 20)
     private String telefonoCliente;
 
     @Column(name = "observaciones_pedido", length = 250)
     private String observacionesPedido; // Ej: "VISA, VINAGRETA" o "Paga con 50 soles"
+
+    // ─── NUEVO: metodo de pago real, necesario para el cuadre de caja ──
+    // Es la fuente de verdad que usa PedidoRepository.calcularTotalVentasPorMetodoTipo()
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "metodo_pago_id")
+    private MetodoPago metodoPago;
 
     @Builder.Default // Necesario para que el builder respete el ArrayList vacío
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)

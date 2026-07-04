@@ -6,6 +6,7 @@ import com.pikudo.entity.*;
 import com.pikudo.repository.ComprobanteRepository;
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.service.ComprobanteService;
+import com.pikudo.service.PagoService;
 import com.pikudo.service.TicketPrinterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,8 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     private final ComprobanteRepository comprobanteRepository;
     private final PedidoRepository pedidoRepository;
     private final ComprobanteMapper comprobanteMapper; // Inyectado
-    private final TicketPrinterService ticketPrinterService; // Nuevo: para imprimir boleta/factura
+    private final TicketPrinterService ticketPrinterService; // Para imprimir boleta/factura
+    private final PagoService pagoService; // Nuevo: valida y asigna el metodo de pago
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
     @Override
     public ComprobanteResponseDTO emitir(ComprobanteRequestDTO dto) {
@@ -32,6 +34,12 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         if (tipo == TipoComprobante.FACTURA && (dto.getRuc() == null || dto.getRazonSocial() == null)) {
             throw new RuntimeException("RUC y Razón Social obligatorios para factura");
         }
+
+        // Valida el metodo de pago contra el catalogo (MetodoPago) y lo asigna al pedido.
+        // Esto es lo que permite que el cuadre de caja (calcularTotalVentasPorMetodoTipo)
+        // pueda agrupar correctamente por tipo (EFECTIVO/TARJETA/DIGITAL).
+        pagoService.aplicarMetodoPago(pedido, dto.getMetodoPago());
+
         BigDecimal montoTotal = pedido.getTotal();
         BigDecimal montoNeto = montoTotal.divide(BigDecimal.ONE.add(TASA_IGV), 2, RoundingMode.HALF_UP);
         BigDecimal igv = montoTotal.subtract(montoNeto);
@@ -55,8 +63,6 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         pedidoRepository.save(pedido);
 
         // Imprime el ticket termico de boleta o factura, segun corresponda.
-        // Si la impresora de caja esta apagada/desconectada, no rompe la emision
-        // del comprobante (ver MotorImpresionImpl, que solo loguea el error).
         if (tipo == TipoComprobante.FACTURA) {
             ticketPrinterService.imprimirFactura(guardado);
         } else {
