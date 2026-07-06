@@ -30,36 +30,26 @@ public class SecurityConfig {
      Define la cadena de filtros de seguridad. Aquí le indicamos a Spring qué rutas
      son públicas (como el Login) y cuáles requieren token obligatorio.
      */
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            // Deshabilitamos CSRF ya que las APIs REST con tokens no lo necesitan
-            .csrf(csrf -> csrf.disable())
-            
-            // Configuración de rutas protegidas
-            .authorizeHttpRequests(auth -> auth
-                // Rutas públicas: login, websockets y documentación Swagger/OpenAPI
-                .requestMatchers(
-                        "/api/auth/**", 
-                        "/ws-pikudo/**",
-                        "/v3/api-docs/**",     // <-- Necesario para que Postman pueda importar el JSON
-                        "/swagger-ui/**",      // <-- Necesario para ver la web de Swagger
-                        "/swagger-ui.html"
-                ).permitAll()
-                .anyRequest().authenticated() // Cualquier otra petición requiere token válido
-            )
-            
-            // Indicamos que nuestra API es Stateless (sin estado/sin sesiones en el servidor)
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            
-            // Enganchamos nuestro filtro JWT antes del filtro de autenticación por defecto de Spring
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    return http
+        .csrf(csrf -> csrf.disable()) // Deshabilitamos CSRF para APIs REST
+        .authorizeHttpRequests(auth -> auth
+            // 1. Permite acceso público a la documentación de Swagger
+            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+            // 2. Permite acceso público a tus rutas de login/auth (ajustado a /api/auth)
+            .requestMatchers("/api/auth/**").permitAll()
+            // 3. Todo lo demás requiere estar autenticado
+            .anyRequest().authenticated()
+        )
+        // 4. Configuración Stateless (necesaria para JWT)
+        .sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
+        // 5. Agregamos tu filtro de seguridad JWT
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+        .build();
+}
     /*
      Bean encargado de encriptar las contraseñas en la base de datos usando el algoritmo BCrypt.
      */

@@ -24,6 +24,12 @@ public class JwtFilter extends OncePerRequestFilter{
      valida el token Bearer y establece la identidad en el contexto de Spring.
      */
     @Override
+protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    // Si la ruta contiene "/api/auth/", el filtro se salta completamente la ejecución
+    return request.getServletPath().contains("/api/auth/");
+}
+    
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,

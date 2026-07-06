@@ -55,7 +55,7 @@ public class DataSeedConfig implements CommandLineRunner {
             admin.setRol(rolAdmin);
 
             usuarioRepository.save(admin);
-            System.out.println("✅ Administrador maestro creado con éxito (User: admin).");
+            System.out.println("✅ Administrador Jaider creado con éxito (User: jaider).");
         }
     }
 }
