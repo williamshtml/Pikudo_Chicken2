@@ -1,4 +1,4 @@
-package com.pikudo.service.archivo.impl;
+package com.pikudo.service.impl;
 
 import com.pikudo.exception.BusinessException;
 import com.pikudo.service.archivo.ArchivoService;

@@ -1,10 +1,11 @@
 package com.pikudo.controller;
 
 import com.pikudo.entity.Usuario;
-import com.pikudo.repository.UsuarioRepository; // Cambia a UsuarioService si manejan interfaz de servicio
+import com.pikudo.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +20,14 @@ public class UsuarioController {
 
     // 1. LISTAR TODO EL PERSONAL (Administrador ve mozos, cocineros, etc.)
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Usuario>> listarTodos() {
         return ResponseEntity.ok(usuarioRepository.findAll());
     }
 
     // 2. BUSCAR UN TRABAJADOR POR ID
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Usuario> buscarPorId(@PathVariable Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
@@ -33,6 +36,7 @@ public class UsuarioController {
 
     // 3. REGISTRAR UN NUEVO TRABAJADOR (Ej: Contratación de un nuevo mozo)
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Usuario> crear(@RequestBody Usuario usuario) {
         // Nota: Si manejan contraseñas encriptadas, aquí se pasaría por el PasswordEncoder antes de guardar
         Usuario nuevo = usuarioRepository.save(usuario);
@@ -41,6 +45,7 @@ public class UsuarioController {
 
     // 4. ELIMINAR O DAR DE BAJA A UN USUARIO
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));

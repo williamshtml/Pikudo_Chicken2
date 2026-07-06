@@ -1,5 +1,6 @@
 package com.pikudo.security;
 
+import com.pikudo.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -37,13 +38,15 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
 
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            // Se usa JwtUtil, igual que en JwtFilter, para no repetir la validacion
+            // de formato "Bearer ..." en dos lugares distintos.
+            if (!JwtUtil.tieneFormatoValido(authHeader)) {
                 log.warn("Conexion WebSocket rechazada: falta el header Authorization");
                 throw new org.springframework.messaging.simp.stomp.StompConversionException(
                         "Token JWT requerido para conectar");
             }
 
-            String jwt = authHeader.substring(7);
+            String jwt = JwtUtil.extraerTokenCrudo(authHeader);
             String username = jwtService.extractUsername(jwt);
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

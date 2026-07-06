@@ -1,5 +1,5 @@
 package com.pikudo.security;
-
+import com.pikudo.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,16 +13,12 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
-
 @Component
-
 public class JwtFilter extends OncePerRequestFilter{
     @Autowired
     private JwtService jwtService;
-
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
-
     /*
      Intercepta cada petición HTTP entrante, lee la cabecera Authorization,
      valida el token Bearer y establece la identidad en el contexto de Spring.
@@ -38,20 +34,18 @@ public class JwtFilter extends OncePerRequestFilter{
         final String jwt;
         final String username;
 
-        // Si la cabecera no existe o no empieza con "Bearer ", ignoramos el filtro y continuamos
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // Se usa JwtUtil en vez de repetir aqui la logica de startsWith/substring,
+        // para no mantener la misma validacion de formato en dos lugares distintos.
+        if (!JwtUtil.tieneFormatoValido(authHeader)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // El texto "Bearer " tiene 7 caracteres, así que cortamos el String desde el índice 7 en adelante
-        jwt = authHeader.substring(7);
+        jwt = JwtUtil.extraerTokenCrudo(authHeader);
         username = jwtService.extractUsername(jwt);
-
         // Si encontramos un username y el usuario no está autenticado aún en el contexto actual
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-
             // Si el token criptográfico coincide con los datos del usuario de la BD y no ha expirado
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
