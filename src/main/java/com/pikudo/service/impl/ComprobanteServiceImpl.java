@@ -1,4 +1,5 @@
 package com.pikudo.service.impl;
+
 import com.pikudo.mapper.ComprobanteMapper; // Inyectado
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteResponseDTO;
@@ -6,22 +7,26 @@ import com.pikudo.entity.*;
 import com.pikudo.repository.ComprobanteRepository;
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.service.ComprobanteService;
+import com.pikudo.service.InventarioService;
 import com.pikudo.service.PagoService;
 import com.pikudo.service.TicketPrinterService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class ComprobanteServiceImpl implements ComprobanteService {
     private final ComprobanteRepository comprobanteRepository;
     private final PedidoRepository pedidoRepository;
     private final ComprobanteMapper comprobanteMapper; // Inyectado
     private final TicketPrinterService ticketPrinterService; // Para imprimir boleta/factura
-    private final PagoService pagoService; // Nuevo: valida y asigna el metodo de pago
+    private final PagoService pagoService; // Valida y asigna el metodo de pago
+    private final InventarioService inventarioService; // Nuevo: descuenta stock al confirmar la venta
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
     @Override
     public ComprobanteResponseDTO emitir(ComprobanteRequestDTO dto) {
@@ -35,9 +40,6 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             throw new RuntimeException("RUC y Razón Social obligatorios para factura");
         }
 
-        // Valida el metodo de pago contra el catalogo (MetodoPago) y lo asigna al pedido.
-        // Esto es lo que permite que el cuadre de caja (calcularTotalVentasPorMetodoTipo)
-        // pueda agrupar correctamente por tipo (EFECTIVO/TARJETA/DIGITAL).
         pagoService.aplicarMetodoPago(pedido, dto.getMetodoPago());
 
         BigDecimal montoTotal = pedido.getTotal();
@@ -62,7 +64,15 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         pedido.setTipoComprobante(tipo);
         pedidoRepository.save(pedido);
 
-        // Imprime el ticket termico de boleta o factura, segun corresponda.
+        // Descuenta el stock de insumos segun la receta de cada producto vendido.
+        // Si un producto no tiene receta configurada, simplemente no descuenta nada
+        // (ver InventarioServiceImpl.descontarStockPorVenta). Si falta stock de un
+        // insumo, lanza BusinessException y revierte toda la transaccion (@Transactional),
+        // incluyendo el comprobante recien creado.
+        for (DetallePedido detalle : pedido.getDetalles()) {
+            inventarioService.descontarStockPorVenta(detalle.getProducto().getId(), detalle.getCantidad());
+        }
+
         if (tipo == TipoComprobante.FACTURA) {
             ticketPrinterService.imprimirFactura(guardado);
         } else {
