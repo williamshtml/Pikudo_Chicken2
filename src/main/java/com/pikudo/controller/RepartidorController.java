@@ -7,6 +7,8 @@ import com.pikudo.repository.UsuarioRepository;
 import com.pikudo.service.impl.PresenciaRepartidorServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // <-- Importación agregada
+import org.springframework.web.bind.annotation.CrossOrigin; // <-- Importación agregada
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/repartidores")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // <-- Conexión limpia con tu frontend
 public class RepartidorController {
 
     private final UsuarioRepository usuarioRepository;
@@ -23,9 +26,10 @@ public class RepartidorController {
 
     /**
      * Carga inicial del panel de caja: todos los usuarios con rol MOTORIZADO,
-     * con su estado de conexion actual. El frontend usa esto al abrir la pantalla,
-     * y despues se mantiene actualizado en tiempo real via /topic/repartidores/estado.
+     * con su estado de conexion actual.
      */
+    // 💵 El Cajero y 👑 el Admin entran aquí para ver a los motorizados disponibles
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
     @GetMapping("/estado")
     public ResponseEntity<List<RepartidorEstadoDTO>> listarConEstado() {
         List<Usuario> repartidores = usuarioRepository.findByRol_Nombre(TipoRol.MOTORIZADO);
