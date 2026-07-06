@@ -20,14 +20,14 @@ public class UsuarioController {
 
     // 1. LISTAR TODO EL PERSONAL (Administrador ve mozos, cocineros, etc.)
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<Usuario>> listarTodos() {
         return ResponseEntity.ok(usuarioRepository.findAll());
     }
 
     // 2. BUSCAR UN TRABAJADOR POR ID
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Usuario> buscarPorId(@PathVariable Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
@@ -36,7 +36,7 @@ public class UsuarioController {
 
     // 3. REGISTRAR UN NUEVO TRABAJADOR (Ej: Contratación de un nuevo mozo)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Usuario> crear(@RequestBody Usuario usuario) {
         // Nota: Si manejan contraseñas encriptadas, aquí se pasaría por el PasswordEncoder antes de guardar
         Usuario nuevo = usuarioRepository.save(usuario);
@@ -45,7 +45,7 @@ public class UsuarioController {
 
     // 4. ELIMINAR O DAR DE BAJA A UN USUARIO
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
