@@ -16,7 +16,7 @@ public class AuthController {
         String password = credentials.get("password");
 
         // Simulación rápida de sesión para desarrollo
-        if ("admin".equals(username) && "123456".equals(password)) {
+        if ("admin".equals(username) && "Piscochi250".equals(password)) {
             return ResponseEntity.ok(Map.of(
                 "token", "jwt-token-pikudo-xyz123",
                 "username", username,
