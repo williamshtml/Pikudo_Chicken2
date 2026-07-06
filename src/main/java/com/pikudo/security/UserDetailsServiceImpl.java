@@ -2,7 +2,7 @@ package com.pikudo.security;
 
 import com.pikudo.entity.Usuario;
 import com.pikudo.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor; // <--- Usamos Lombok
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,33 +12,30 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 
 @Service
+@RequiredArgsConstructor // <--- Constructor limpio, sin @Autowired
+public class UserDetailsServiceImpl implements UserDetailsService {
 
-public class UserDetailsServiceImpl implements UserDetailsService{
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    /*
-     Conecta Spring Security con tu base de datos usando el método findByUsername de tu compañero.
-     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Buscamos al usuario en la BD. Si no existe, lanzamos un error de seguridad controlado.
+        // 1. Buscamos el usuario
         Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con el username: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
-        // Extraemos el rol de nuestra entidad y lo convertimos en una autoridad de Spring Security
-        String nombreRol = usuario.getRol() != null ? usuario.getRol().getNombre().name() : "MOZO";
+        // 2. Extraemos el rol de forma segura
+        String nombreRol = (usuario.getRol() != null) ? usuario.getRol().getNombre().name() : "MOZO";
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + nombreRol);
 
-        // Retornamos el User estándar de Spring Security con los datos de nuestra base de datos
+        // 3. Retornamos el User de Spring con la validación de estado activa
         return new User(
                 usuario.getUsername(),
                 usuario.getPassword(),
-                usuario.getEstado(), // Si el estado es false, Spring bloqueará el inicio de sesión
-                true, // Cuenta no expirada
-                true, // Credenciales no expiradas
-                true, // Cuenta no bloqueada
-                Collections.singletonList(authority) // Lista con el rol del usuario
+                usuario.getEstado(), // Si es false, el usuario no puede loguearse
+                true, 
+                true, 
+                true, 
+                Collections.singletonList(authority)
         );
     }
 }
