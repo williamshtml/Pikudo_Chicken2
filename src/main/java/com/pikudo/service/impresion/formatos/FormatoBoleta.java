@@ -51,7 +51,6 @@ public class FormatoBoleta {
             out.write(LEFT);
             escribir(out, "Fecha: " + comprobante.getFechaEmision() + "\n");
             escribir(out, "Pedido: #" + comprobante.getPedido().getId() + "\n");
-            escribir(out, "Metodo de pago: " + comprobante.getMetodo_pago() + "\n");
             escribir(out, "--------------------------------\n");
 
             for (DetallePedido d : comprobante.getPedido().getDetalles()) {
@@ -68,6 +67,12 @@ public class FormatoBoleta {
             out.write(BOLD_ON);
             escribir(out, "TOTAL        : S/ " + comprobante.getMontoTotal() + "\n");
             out.write(BOLD_OFF);
+
+            escribir(out, "\n");
+            escribir(out, "Forma de pago:\n");
+            for (var pago : comprobante.getPagos()) {
+                escribir(out, "  " + pago.getMetodoPago().getNombre() + " : S/ " + pago.getMonto() + "\n");
+            }
 
             // TODO: cuando se integre un OSE/PSE, imprimir aqui el codigo QR
             // (comando raster GS v 0) generado a partir del hash/CPE que devuelva el proveedor.

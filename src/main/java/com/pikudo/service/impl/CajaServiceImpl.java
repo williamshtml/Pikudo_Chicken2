@@ -7,10 +7,10 @@ import com.pikudo.dto.caja.MetodoPagoDTO;
 import com.pikudo.entity.Usuario;
 import com.pikudo.entity.caja.Caja;
 import com.pikudo.entity.caja.Gasto;
-import com.pikudo.repository.CajaRepository; // Asegúrate de tener este repositorio básico creado
+import com.pikudo.repository.CajaRepository;
 import com.pikudo.repository.GastoRepository;
-import com.pikudo.repository.MetodoPagoRepository; // Asegúrate de tener este repositorio básico creado
-import com.pikudo.repository.PedidoRepository;
+import com.pikudo.repository.MetodoPagoRepository;
+import com.pikudo.repository.TransaccionPagoRepository;
 import com.pikudo.repository.UsuarioRepository;
 import com.pikudo.service.CajaService;
 import com.pikudo.service.TicketPrinterService;
@@ -33,10 +33,10 @@ public class CajaServiceImpl implements CajaService {
     private final CajaRepository cajaRepository;
     private final GastoRepository gastoRepository;
     private final MetodoPagoRepository metodoPagoRepository;
-    private final PedidoRepository pedidoRepository;
+    private final TransaccionPagoRepository transaccionPagoRepository; // Reemplaza a pedidoRepository para el desglose por metodo
     private final UsuarioRepository usuarioRepository;
-    private final CajaMapper cajaMapper; // Inyectado
-    private final TicketPrinterService ticketPrinterService; // Nuevo: para imprimir el reporte de cierre
+    private final CajaMapper cajaMapper;
+    private final TicketPrinterService ticketPrinterService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -77,9 +77,12 @@ public class CajaServiceImpl implements CajaService {
         }
 
         LocalDateTime finTurno = LocalDateTime.now();
-        BigDecimal efectivo = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "EFECTIVO");
-        BigDecimal tarjeta = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "TARJETA");
-        BigDecimal digital = pedidoRepository.calcularTotalVentasPorMetodoTipo(caja.getFechaApertura(), finTurno, "DIGITAL");
+
+        // Ahora se calcula a partir de TransaccionPago, ya que un pedido puede
+        // tener varios metodos de pago (pagos divididos)
+        BigDecimal efectivo = transaccionPagoRepository.calcularTotalPorTipoMetodo("EFECTIVO", caja.getFechaApertura(), finTurno);
+        BigDecimal tarjeta = transaccionPagoRepository.calcularTotalPorTipoMetodo("TARJETA", caja.getFechaApertura(), finTurno);
+        BigDecimal digital = transaccionPagoRepository.calcularTotalPorTipoMetodo("DIGITAL", caja.getFechaApertura(), finTurno);
         BigDecimal gastos = gastoRepository.calcularTotalGastosPorRango(caja.getFechaApertura(), finTurno);
 
         caja.setFechaCierre(finTurno);
@@ -93,9 +96,6 @@ public class CajaServiceImpl implements CajaService {
         caja.setEstado("CERRADA");
 
         Caja cerrada = cajaRepository.save(caja);
-
-        // Imprime el ticket de cierre de caja (reporte de turno) apenas se cierra.
-        // Si la impresora esta apagada/desconectada, no rompe el cierre (ver MotorImpresionImpl).
         ticketPrinterService.imprimirReporteCierreCaja(cerrada);
 
         return cajaMapper.toCajaDTO(cerrada);

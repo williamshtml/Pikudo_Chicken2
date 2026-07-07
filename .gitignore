@@ -1,13 +1,22 @@
-# GitIgnore personalizado para Pikudo Chicken
-/target/
-/.nbproject/
-/nbproject/
-/nbbuild/
-/dist/
-nb-configuration.xml
+# --- Backend (Java/Spring) ---
+target/
+.mvn/
+.settings/
+.classpath
+.project
+.idea/
 *.class
-<<<<<<< HEAD
-=======
+*.jar
+*.war
+
+# --- Frontend (Angular) ---
+node_modules/
+dist/
+.angular/
+.sass-cache/
+.vscode/
+coverage/
+
+# --- Otros ---
 .DS_Store
 Thumbs.db
->>>>>>> origin/main

@@ -1,13 +1,17 @@
 package com.pikudo.service;
 
-import com.pikudo.entity.Pedido;
+import com.pikudo.dto.comprobante.PagoDetalleDTO;
+import com.pikudo.entity.Comprobante;
 import com.pikudo.entity.caja.MetodoPago;
+import com.pikudo.entity.caja.TransaccionPago;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
- * Encapsula la logica de negocio alrededor del metodo de pago de un pedido:
- * validar que el metodo exista y este activo, y asignarlo correctamente.
- * Es la pieza que faltaba para que las queries de cuadre de caja
- * (PedidoRepository.calcularTotalVentasPorMetodoTipo) tengan datos reales.
+ * Encapsula la logica de negocio de los pagos: validar metodos, y construir
+ * las transacciones de pago de un comprobante, soportando pagos divididos
+ * (ej: mitad efectivo, mitad Yape) siempre que la suma coincida con el total.
  */
 public interface PagoService {
 
@@ -18,9 +22,11 @@ public interface PagoService {
     MetodoPago resolverMetodoPago(String nombre);
 
     /**
-     * Resuelve el metodo de pago y lo asigna al pedido. No guarda el pedido
-     * (eso lo hace quien orquesta, ej. ComprobanteServiceImpl), solo deja
-     * la entidad lista para persistir.
+     * Valida la lista de pagos (cada metodo existe/activo, montos positivos, y la suma
+     * coincide exactamente con el total del comprobante) y construye las entidades
+     * TransaccionPago listas para asociar al comprobante. No las guarda directamente;
+     * eso lo hace el orquestador (ComprobanteServiceImpl) al persistir el comprobante
+     * con cascade.
      */
-    void aplicarMetodoPago(Pedido pedido, String nombreMetodoPago);
+    List<TransaccionPago> procesarPagos(Comprobante comprobante, List<PagoDetalleDTO> pagos, BigDecimal montoEsperado);
 }

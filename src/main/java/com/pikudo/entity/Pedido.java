@@ -1,5 +1,4 @@
 package com.pikudo.entity;
-import com.pikudo.entity.caja.MetodoPago;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 // Importaciones específicas, nada de asteriscos
@@ -46,9 +45,8 @@ public class Pedido extends Auditable {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", length = 20)
-    private TipoComprobante tipoComprobante; // <--- AGREGADO PARA EL COMPROBANTE
-// ... resto de la clase
-    
+    private TipoComprobante tipoComprobante;
+
     @Column(name = "tipo_pedido", length = 20)
     private String tipoPedido;
     
@@ -63,15 +61,13 @@ public class Pedido extends Auditable {
     private String telefonoCliente;
 
     @Column(name = "observaciones_pedido", length = 250)
-    private String observacionesPedido; // Ej: "VISA, VINAGRETA" o "Paga con 50 soles"
+    private String observacionesPedido;
 
-    // ─── NUEVO: metodo de pago real, necesario para el cuadre de caja ──
-    // Es la fuente de verdad que usa PedidoRepository.calcularTotalVentasPorMetodoTipo()
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "metodo_pago_id")
-    private MetodoPago metodoPago;
+    // NOTA: se elimino el campo "metodoPago" que tenia Pedido. Ahora el metodo
+    // (o metodos, si el pago es dividido) de pago vive en TransaccionPago,
+    // asociado al Comprobante. Ver Comprobante.pagos.
 
-    @Builder.Default // Necesario para que el builder respete el ArrayList vacío
+    @Builder.Default
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetallePedido> detalles = new ArrayList<>();
 }

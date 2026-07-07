@@ -50,7 +50,6 @@ public class FormatoFactura {
             out.write(LEFT);
             escribir(out, "Fecha: " + comprobante.getFechaEmision() + "\n");
             escribir(out, "Pedido: #" + comprobante.getPedido().getId() + "\n");
-            escribir(out, "Metodo de pago: " + comprobante.getMetodo_pago() + "\n");
             escribir(out, "\n");
 
             // Datos del cliente corporativo - unico bloque que distingue a la factura
@@ -72,6 +71,12 @@ public class FormatoFactura {
             out.write(BOLD_ON);
             escribir(out, "TOTAL        : S/ " + comprobante.getMontoTotal() + "\n");
             out.write(BOLD_OFF);
+
+            escribir(out, "\n");
+            escribir(out, "Forma de pago:\n");
+            for (var pago : comprobante.getPagos()) {
+                escribir(out, "  " + pago.getMetodoPago().getNombre() + " : S/ " + pago.getMonto() + "\n");
+            }
 
             // TODO: cuando se integre un OSE/PSE, imprimir aqui el codigo QR
 
