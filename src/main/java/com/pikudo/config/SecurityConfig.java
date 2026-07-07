@@ -14,53 +14,59 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+// Nuevas importaciones para CORS
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
+
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // <-- Esto activa la seguridad por roles (@PreAuthorize) en tus controladores
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
 
-    // Inyectamos el filtro JWT mediante constructor
     public SecurityConfig(JwtFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
     }
 
-    /*
-     Define la cadena de filtros de seguridad. Aquí le indicamos a Spring qué rutas
-     son públicas (como el Login) y cuáles requieren token obligatorio.
-     */
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    return http
-        .csrf(csrf -> csrf.disable()) // Deshabilitamos CSRF para APIs REST
-        .authorizeHttpRequests(auth -> auth
-            // 1. Permite acceso público a la documentación de Swagger
-            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-            // 2. Permite acceso público a tus rutas de login/auth (ajustado a /api/auth)
-            .requestMatchers("/api/auth/**").permitAll()
-            // 3. Todo lo demás requiere estar autenticado
-            .anyRequest().authenticated()
-        )
-        // 4. Configuración Stateless (necesaria para JWT)
-        .sessionManagement(session -> session
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        )
-        // 5. Agregamos tu filtro de seguridad JWT
-        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-        .build();
-}
-    /*
-     Bean encargado de encriptar las contraseñas en la base de datos usando el algoritmo BCrypt.
-     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // <-- ACTIVAMOS CORS AQUÍ
+            .csrf(csrf -> csrf.disable()) 
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
+
+    // <-- ESTE MÉTODO DEFINE LAS REGLAS DE "QUIÉN PUEDE CONECTARSE"
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Origen permitido
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos permitidos
+        configuration.setAllowedHeaders(Arrays.asList("*")); // Permite todas las cabeceras
+        configuration.setAllowCredentials(true); // Permite enviar cookies/tokens de autenticación
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration); // Aplica a todas las rutas
+        return source;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /*
-     Administrador de autenticación requerido para procesar el Login en los servicios.
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
