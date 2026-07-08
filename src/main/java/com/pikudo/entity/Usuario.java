@@ -23,8 +23,8 @@ import lombok.Builder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class Usuario {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -48,6 +48,30 @@ public class Usuario {
     @NotBlank: Lo mismo que con username, se frenara la operacion y saltare el mensaje
     @Column: No espacios vacios / No se indica limite de caracteres, ya que eso lo hara Spring Security
     */
+
+    // --- NUEVOS CAMPOS AGREGADOS ---
+
+    @NotBlank(message = "El nombre es obligatorio")
+    @Column(nullable = false, length = 50)
+    private String nombre;
+
+    @NotBlank(message = "El apellido es obligatorio")
+    @Column(nullable = false, length = 50)
+    private String apellido;
+
+    @NotBlank(message = "El DNI es obligatorio")
+    @Column(unique = true, nullable = false, length = 8)
+    private String dni;
+    /*
+    unique = true: Evita que dos trabajadores se registren con el mismo DNI
+    */
+
+    @NotBlank(message = "El teléfono es obligatorio")
+    @Column(nullable = false, length = 15)
+    private String telefono;
+
+    // -------------------------------
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean estado = true;

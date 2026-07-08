@@ -4,17 +4,25 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Builder; // <-- IMPORTANTE: Importar Lombok Builder
 
-@Getter              // Genera los métodos para leer los datos del usuario en el frontend
-@Setter              // Genera los métodos para transferir la información desde la Entity
-@NoArgsConstructor   // Constructor vacío () requerido para Jackson
-@AllArgsConstructor  // Constructor completo que cubre todos los campos (incluyendo token)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder // <-- IMPORTANTE: Agregar esta anotación
 public class UsuarioResponseDTO {
 
-    private Long id;              // ID único del usuario en el sistema
-    private String username;       // Nombre de usuario / credencial de acceso
-    private String nombreCompleto; // Nombres y apellidos del colaborador
-    private Boolean estado;       // Estado del usuario (true = Activo, false = Cesado/Inactivo)
-    private String rolNombre;     // Nombre limpio del rol asignado (ej: "ADMIN", "MOZO")
-    private String token;         // JWT de sesión. Solo se llena en el Login; en CRUDs queda null
+    // BORRASTE el método public static Object builder() manual.
+    // ¡Lombok lo creará por ti automáticamente al compilar!
+
+    private Long id;
+    private String username;
+    private String nombre;
+    private String apellido;
+    private String dni;
+    private String telefono;
+    private Boolean estado;
+    private String rolNombre;
+    private String token;
 }

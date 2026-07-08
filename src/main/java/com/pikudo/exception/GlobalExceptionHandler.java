@@ -38,7 +38,16 @@ public class GlobalExceptionHandler {
         respuesta.put("message", ex.getMessage());
         return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
     }
-
+    
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> manejarBadCredentials(org.springframework.security.authentication.BadCredentialsException ex) {
+        Map<String, Object> respuesta = new HashMap<>();
+        respuesta.put("status", HttpStatus.UNAUTHORIZED.value());
+        respuesta.put("error", "Credenciales incorrectas");
+        respuesta.put("message", "El usuario o la contraseña proporcionados son incorrectos.");
+        return new ResponseEntity<>(respuesta, HttpStatus.UNAUTHORIZED);
+    }
+    
     // Atrapamos cualquier otro error inesperado del servidor (Ej: errores de SQL)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> manejarErroresGlobales(Exception ex) {

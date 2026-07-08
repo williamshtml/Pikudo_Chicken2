@@ -10,13 +10,17 @@ public class UsuarioMapper {
     public UsuarioResponseDTO toDTO(Usuario u) {
         if (u == null) return null;
         
-        return new UsuarioResponseDTO(
-            u.getId(), 
-            u.getUsername(), 
-            u.getUsername(), // Ajusta si es diferente el nombre completo
-            u.getEstado(), 
-            u.getRol() != null ? u.getRol().getNombre().name() : null, 
-            null // Password suele ir null por seguridad
-        );
+        return UsuarioResponseDTO.builder()
+            .id(u.getId())
+            .username(u.getUsername())
+            .nombre(u.getNombre())
+            .apellido(u.getApellido())
+            .dni(u.getDni())
+            .telefono(u.getTelefono())
+            .estado(u.getEstado())
+            // Aquí usamos .name() para convertir el Enum a String
+            .rolNombre(u.getRol() != null ? u.getRol().getNombre().name() : "SIN ROL")
+            .build();
     }
 }
+    

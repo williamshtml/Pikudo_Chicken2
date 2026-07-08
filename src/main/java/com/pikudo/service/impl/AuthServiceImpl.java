@@ -43,26 +43,30 @@ public class AuthServiceImpl implements AuthService {
         return authMapper.toAuthResponse(usuario, token);
     }
 
-    @Override
-    @Transactional
-    public AuthResponseDTO register(RegisterRequestDTO dto) {
-        if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso");
-        }
-
-        Rol rol = rolRepository.findById(dto.getRolId())
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado con id: " + dto.getRolId()));
-
-        Usuario usuario = Usuario.builder()
-                .username(dto.getUsername())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .rol(rol)
-                .build();
-
-        Usuario guardado = usuarioRepository.save(usuario);
-        String token = jwtService.generateToken(guardado);
-
-        // Ahora usamos el mapper
-        return authMapper.toAuthResponse(guardado, token);
+@Override
+@Transactional
+public AuthResponseDTO register(RegisterRequestDTO dto) {
+    if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
+        throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso");
     }
+
+    Rol rol = rolRepository.findById(dto.getRolId())
+            .orElseThrow(() -> new RuntimeException("Rol no encontrado con id: " + dto.getRolId()));
+
+    // AQUÍ ESTABA EL ERROR: Faltaban asignar los campos personales
+    Usuario usuario = Usuario.builder()
+            .username(dto.getUsername())
+            .password(passwordEncoder.encode(dto.getPassword()))
+            .nombre(dto.getNombre())       // <--- AGREGADO
+            .apellido(dto.getApellido())   // <--- AGREGADO
+            .dni(dto.getDni())             // <--- AGREGADO
+            .telefono(dto.getTelefono())   // <--- AGREGADO
+            .rol(rol)
+            .build();
+
+    Usuario guardado = usuarioRepository.save(usuario);
+    String token = jwtService.generateToken(guardado);
+
+    return authMapper.toAuthResponse(guardado, token);
+}
 }
