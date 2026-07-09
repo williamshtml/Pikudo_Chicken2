@@ -2,6 +2,8 @@ package com.pikudo.service;
 
 import com.pikudo.dto.usuario.UsuarioRequestDTO;
 import com.pikudo.dto.usuario.UsuarioResponseDTO;
+import com.pikudo.dto.usuario.UsuarioUpdateRequestDTO;
+
 import java.util.List;
 
 public interface UsuarioService {
@@ -9,6 +11,6 @@ public interface UsuarioService {
     List<UsuarioResponseDTO> listarActivos();
     List<UsuarioResponseDTO> listarTodos();
     UsuarioResponseDTO buscarPorId(Long id);
-    UsuarioResponseDTO actualizar(Long id, UsuarioRequestDTO dto);
+    UsuarioResponseDTO actualizar(Long id, UsuarioUpdateRequestDTO dto); // cambia el tipo de DTO
     void desactivar(Long id);
 }

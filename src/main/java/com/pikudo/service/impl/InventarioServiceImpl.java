@@ -94,7 +94,6 @@ public class InventarioServiceImpl implements InventarioService {
         aplicarMovimientoAlStock(insumo, dto.getCantidad(), tipo);
 
         MovimientoInventario movimiento = inventarioMapper.toEntity(dto, insumo, usuario);
-        insumoRepository.save(insumo);
         return inventarioMapper.toDTO(movimientoRepository.save(movimiento));
     }
 
@@ -103,8 +102,8 @@ public class InventarioServiceImpl implements InventarioService {
         List<Receta> receta = recetaRepository.findByProductoId(productoId);
 
         if (receta.isEmpty()) {
-            // No todos los productos tienen receta configurada (ej. bebidas envasadas
-            // que no llevan preparacion); no es un error, simplemente no hay nada que descontar
+            // No todos los productos tienen receta configurada (ej. bebidas envasadas);
+            // no es un error, simplemente no hay nada que descontar
             return;
         }
 
@@ -115,7 +114,6 @@ public class InventarioServiceImpl implements InventarioService {
             BigDecimal cantidadADescontar = r.getCantidad().multiply(BigDecimal.valueOf(cantidadVendida));
 
             aplicarMovimientoAlStock(insumo, cantidadADescontar, TipoMovimiento.EGRESO);
-            insumoRepository.save(insumo);
 
             MovimientoInventario movimiento = MovimientoInventario.builder()
                     .insumo(insumo)
@@ -128,22 +126,55 @@ public class InventarioServiceImpl implements InventarioService {
         }
     }
 
+    @Override
+    public void revertirStockPorCancelacion(Long productoId, Integer cantidadCancelada) {
+        List<Receta> receta = recetaRepository.findByProductoId(productoId);
+
+        if (receta.isEmpty()) {
+            return;
+        }
+
+        Usuario usuario = usuarioActualOSistema();
+
+        for (Receta r : receta) {
+            Insumo insumo = r.getInsumo();
+            BigDecimal cantidadADevolver = r.getCantidad().multiply(BigDecimal.valueOf(cantidadCancelada));
+
+            aplicarMovimientoAlStock(insumo, cantidadADevolver, TipoMovimiento.INGRESO);
+
+            MovimientoInventario movimiento = MovimientoInventario.builder()
+                    .insumo(insumo)
+                    .cantidad(cantidadADevolver)
+                    .tipoMovimiento(TipoMovimiento.INGRESO)
+                    .motivo("Reversión por cancelación - Producto #" + productoId)
+                    .usuario(usuario)
+                    .build();
+            movimientoRepository.save(movimiento);
+        }
+    }
+
     // ---- Helpers privados ----
 
     private void aplicarMovimientoAlStock(Insumo insumo, BigDecimal cantidad, TipoMovimiento tipo) {
+        int filasActualizadas;
         if (tipo == TipoMovimiento.INGRESO) {
-            insumo.setStockActual(insumo.getStockActual().add(cantidad));
+            filasActualizadas = insumoRepository.incrementarStockAtomico(insumo.getId(), cantidad);
         } else {
-            BigDecimal nuevoStock = insumo.getStockActual().subtract(cantidad);
-            if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) {
-                // Advertencia, no bloqueo: se permite que el stock quede en negativo
-                // para reflejar el faltante real, sin frenar la venta. Cuando el
-                // inventario este mas maduro y confiable, esto se puede endurecer
-                // a un BusinessException que bloquee la operacion.
-                log.warn("Stock negativo para '{}': quedará en {} {} (se intentó descontar {})",
-                        insumo.getNombre(), nuevoStock, insumo.getUnidadMedida(), cantidad);
-            }
-            insumo.setStockActual(nuevoStock);
+            filasActualizadas = insumoRepository.descontarStockAtomico(insumo.getId(), cantidad);
+        }
+
+        if (filasActualizadas == 0) {
+            throw new ResourceNotFoundException("No se pudo actualizar el stock del insumo: " + insumo.getId());
+        }
+
+        // Refrescamos el objeto en memoria con el valor real ya actualizado en BD
+        insumoRepository.findById(insumo.getId()).ifPresent(actualizado ->
+                insumo.setStockActual(actualizado.getStockActual())
+        );
+
+        if (tipo != TipoMovimiento.INGRESO && insumo.getStockActual().compareTo(BigDecimal.ZERO) < 0) {
+            log.warn("Stock negativo para '{}': quedó en {} {}",
+                    insumo.getNombre(), insumo.getStockActual(), insumo.getUnidadMedida());
         }
     }
 
@@ -154,8 +185,6 @@ public class InventarioServiceImpl implements InventarioService {
     }
 
     private Usuario usuarioActualOSistema() {
-        // El descuento por venta puede dispararse en un contexto sin usuario autenticado
-        // explicito (ej. un job interno); si no hay sesion, se registra sin usuario.
         try {
             return usuarioActual();
         } catch (Exception e) {

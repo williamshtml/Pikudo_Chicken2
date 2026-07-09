@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/pedidos")
-@CrossOrigin(origins = "*") 
+ 
 public class PedidoController {
 
     @Autowired

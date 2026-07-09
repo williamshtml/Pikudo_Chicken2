@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Nos ahorra los @Autowired
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PedidoServiceImpl implements PedidoService {
 
@@ -33,7 +33,10 @@ public class PedidoServiceImpl implements PedidoService {
     private final SimpMessagingTemplate template;
     private final TicketPrinterServiceImpl ticketPrinterService;
     private final ImpresoraRepository impresoraRepository;
-    private final PedidoMapper pedidoMapper; // Inyectamos el nuevo mapper
+    private final PedidoMapper pedidoMapper;
+    // REVERTIDO: se quitó InventarioService de aquí.
+    // El descuento de stock ocurre en ComprobanteServiceImpl.emitir(),
+    // que es el momento correcto (cuando el pedido se cobra, no cuando se crea).
 
     // --- METODOS DE CREACION Y ESTADO ---
 
@@ -92,9 +95,12 @@ public class PedidoServiceImpl implements PedidoService {
 
         Pedido guardado = pedidoRepository.save(pedido);
 
+        // REVERTIDO: se quitó la llamada a inventarioService.descontarStockPorVenta() de aquí.
+        // Ya existe en ComprobanteServiceImpl.emitir() y no debe duplicarse.
+
         ticketPrinterService.imprimirTicketsPorArea(guardado);
 
-        PedidoResponseDTO response = pedidoMapper.toDTO(guardado); // Usamos el mapper
+        PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
 
         if ("DELIVERY".equals(guardado.getTipoPedido())) {
             template.convertAndSend("/topic/repartidores", response);
@@ -146,31 +152,40 @@ public class PedidoServiceImpl implements PedidoService {
 
     // --- METODOS DE CONSULTA ---
     @Override
-    public List<PedidoResponseDTO> listarTodos() { 
-        return pedidoRepository.findAll().stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    public List<PedidoResponseDTO> listarTodos() {
+        return pedidoRepository.findAll().stream().map(pedidoMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
-    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) { 
-        return pedidoRepository.findByEstado(estado).stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    public List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado) {
+        return pedidoRepository.findByEstado(estado).stream().map(pedidoMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
-    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) { 
-        return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido).stream().map(pedidoMapper::toDTO).collect(Collectors.toList()); 
+    public List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido) {
+        return pedidoRepository.findByMesaIdAndEstadoNot(mesaId, estadoExcluido).stream().map(pedidoMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
-    public PedidoResponseDTO buscarPorId(Long id) { 
+    public PedidoResponseDTO buscarPorId(Long id) {
         return pedidoMapper.toDTO(pedidoRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"))); 
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado")));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelar(Long id) {
         Pedido p = pedidoRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+        // REVERTIDO: se quitó la reversión de stock de aquí.
+        // Como el stock nunca se descuenta al crear el pedido (solo al emitir
+        // el comprobante), cancelar un pedido no pagado no debe tocar el inventario.
+        // Si en el futuro se permite cancelar un pedido YA PAGADO (con comprobante
+        // emitido), ahí sí habría que revertir stock — pero eso es un caso de
+        // "anulación de comprobante", no de cancelación de pedido. Lo dejamos
+        // pendiente para cuando revisemos ese flujo específico.
+
         p.setEstado(EstadoPedido.CANCELLED);
         Pedido actualizado = pedidoRepository.save(p);
 

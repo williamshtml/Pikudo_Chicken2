@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/repartidores")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // <-- Conexión limpia con tu frontend
+
 public class RepartidorController {
 
     private final UsuarioRepository usuarioRepository;

@@ -1,40 +1,56 @@
 package com.pikudo.controller;
 
-import com.pikudo.entity.Comprobante;
-import com.pikudo.repository.ComprobanteRepository; // Cambia a ComprobanteService si usan interfaz de servicio
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pikudo.dto.comprobante.AnularComprobanteRequestDTO;
+import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
+import com.pikudo.dto.comprobante.ComprobanteResponseDTO;
+import com.pikudo.dto.comprobante.NotaCreditoResponseDTO;
+import com.pikudo.service.ComprobanteService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/comprobantes")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class ComprobanteController {
 
-    @Autowired
-    private ComprobanteRepository comprobanteRepository;
+    private final ComprobanteService comprobanteService;
 
-    // 1. GENERAR BOLETA O FACTURA (Cerrar caja y calcular oficialmente el IGV)
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
     @PostMapping
-    public ResponseEntity<Comprobante> crearComprobante(@RequestBody Comprobante comprobante) {
-        Comprobante nuevo = comprobanteRepository.save(comprobante);
+    public ResponseEntity<ComprobanteResponseDTO> emitir(@Valid @RequestBody ComprobanteRequestDTO dto) {
+        ComprobanteResponseDTO nuevo = comprobanteService.emitir(dto);
         return new ResponseEntity<>(nuevo, HttpStatus.CREATED);
     }
 
-    // 2. BUSCAR UN COMPROBANTE POR ID (Para imprimir el ticket térmico)
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
     @GetMapping("/{id}")
-    public ResponseEntity<Comprobante> buscarPorId(@PathVariable Long id) {
-        Comprobante comp = comprobanteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Comprobante no encontrado con ID: " + id));
-        return ResponseEntity.ok(comp);
+    public ResponseEntity<ComprobanteResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(comprobanteService.buscarPorId(id));
     }
 
-    // 3. HISTORIAL DE VENTAS
-    @GetMapping
-    public ResponseEntity<List<Comprobante>> listarTodos() {
-        return ResponseEntity.ok(comprobanteRepository.findAll());
+    // Historial de ventas. Ej: GET /api/comprobantes/historial?desde=2026-07-01&hasta=2026-07-08
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
+    @GetMapping("/historial")
+    public ResponseEntity<List<ComprobanteResponseDTO>> listarPorRangoFechas(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return ResponseEntity.ok(comprobanteService.listarPorRangoFechas(desde, hasta));
+    }
+
+    // NUEVO: anular un comprobante ya emitido (genera Nota de Crédito)
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
+    @PostMapping("/{id}/anular")
+    public ResponseEntity<NotaCreditoResponseDTO> anular(
+            @PathVariable Long id,
+            @Valid @RequestBody AnularComprobanteRequestDTO dto) {
+        return ResponseEntity.ok(comprobanteService.anular(id, dto));
     }
 }

@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/productos")
-@CrossOrigin(origins = "*") // Permite la comunicación con Angular sin bloqueos de CORS
+
 public class ProductoController {
 
     @Autowired

@@ -1,32 +1,37 @@
 package com.pikudo.service.impl;
-
-import com.pikudo.service.MesaService;
+import com.pikudo.dto.mesa.MesaEstadoResponseDTO;
 import com.pikudo.dto.mesa.MesaRequestDTO;
 import com.pikudo.dto.mesa.MesaResponseDTO;
+import com.pikudo.entity.EstadoPedido;
 import com.pikudo.entity.Mesa;
+import com.pikudo.exception.BusinessException;
+import com.pikudo.exception.ResourceNotFoundException;
 import com.pikudo.mapper.MesaMapper;
 import com.pikudo.repository.MesaRepository;
+import com.pikudo.repository.PedidoRepository;
+import com.pikudo.service.MesaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MesaServiceImpl implements MesaService {
-
     private final MesaRepository mesaRepository;
-    private final MesaMapper mesaMapper; // Inyectamos el nuevo mapper aquí
+    private final PedidoRepository pedidoRepository;
+    private final MesaMapper mesaMapper;
 
     @Override
     @Transactional
     public MesaResponseDTO crear(MesaRequestDTO dto) {
+        validarNumeroDisponible(dto.getNumero(), null);
+
         Mesa mesa = Mesa.builder()
                 .numero(dto.getNumero())
                 .capacidad(dto.getCapacidad())
-                .estado(true) // Siempre es buena idea que nazca activa
+                .estado(true)
                 .build();
         return mesaMapper.toDTO(mesaRepository.save(mesa));
     }
@@ -35,7 +40,7 @@ public class MesaServiceImpl implements MesaService {
     @Transactional(readOnly = true)
     public List<MesaResponseDTO> listarTodas() {
         return mesaRepository.findAll().stream()
-                .map(mesaMapper::toDTO) // Se ve mucho más limpio así
+                .map(mesaMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -49,9 +54,31 @@ public class MesaServiceImpl implements MesaService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<MesaEstadoResponseDTO> listarConOcupacion() {
+        return mesaRepository.findByEstado(true).stream()
+                .map(mesa -> {
+                    // La ocupacion se calcula en el momento, no se guarda como campo fijo:
+                    // evita que quede desincronizada con el estado real de los pedidos.
+                    boolean tienePedidoAbierto = !pedidoRepository
+                            .findByMesaIdAndEstadoNot(mesa.getId(), EstadoPedido.PAID)
+                            .isEmpty();
+
+                    return new MesaEstadoResponseDTO(
+                            mesa.getId(),
+                            mesa.getNumero(),
+                            mesa.getCapacidad(),
+                            mesa.getEstado(),
+                            tienePedidoAbierto
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public MesaResponseDTO buscarPorId(Long id) {
         Mesa mesa = mesaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mesa no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con id: " + id));
         return mesaMapper.toDTO(mesa);
     }
 
@@ -59,7 +86,10 @@ public class MesaServiceImpl implements MesaService {
     @Transactional
     public MesaResponseDTO actualizar(Long id, MesaRequestDTO dto) {
         Mesa mesa = mesaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mesa no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con id: " + id));
+
+        validarNumeroDisponible(dto.getNumero(), id);
+
         mesa.setNumero(dto.getNumero());
         mesa.setCapacidad(dto.getCapacidad());
         return mesaMapper.toDTO(mesaRepository.save(mesa));
@@ -69,8 +99,27 @@ public class MesaServiceImpl implements MesaService {
     @Transactional
     public void desactivar(Long id) {
         Mesa mesa = mesaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mesa no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con id: " + id));
+
+        boolean tienePedidoAbierto = !pedidoRepository
+                .findByMesaIdAndEstadoNot(id, EstadoPedido.PAID)
+                .isEmpty();
+
+        if (tienePedidoAbierto) {
+            throw new BusinessException(
+                    "No se puede dar de baja la mesa #" + mesa.getNumero() +
+                            ": tiene un pedido abierto. Cierra o cancela el pedido primero.");
+        }
+
         mesa.setEstado(false);
         mesaRepository.save(mesa);
+    }
+
+    private void validarNumeroDisponible(Integer numero, Long idExcluido) {
+        mesaRepository.findByNumero(numero).ifPresent(existente -> {
+            if (idExcluido == null || !existente.getId().equals(idExcluido)) {
+                throw new BusinessException("Ya existe una mesa con el número " + numero);
+            }
+        });
     }
 }

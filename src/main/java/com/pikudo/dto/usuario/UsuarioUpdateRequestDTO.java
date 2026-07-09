@@ -12,14 +12,10 @@ import lombok.AllArgsConstructor;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UsuarioRequestDTO {
+public class UsuarioUpdateRequestDTO {
     @NotBlank(message = "El username es obligatorio")
     @Size(min = 4, max = 50)
     private String username;
-
-    @NotBlank(message = "El password es obligatorio")
-    @Size(min = 6, message = "El password debe tener al menos 6 caracteres")
-    private String password;
 
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
@@ -36,4 +32,9 @@ public class UsuarioRequestDTO {
 
     @NotNull(message = "El rol es obligatorio")
     private Long rolId;
+
+    // Password OPCIONAL: si no se envía (o viene vacío), no se cambia.
+    // Sin @NotBlank a propósito — solo se valida el tamaño SI el admin decide cambiarlo.
+    @Size(min = 6, message = "El password debe tener al menos 6 caracteres")
+    private String password;
 }

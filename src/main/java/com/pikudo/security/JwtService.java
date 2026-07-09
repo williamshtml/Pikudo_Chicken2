@@ -1,12 +1,12 @@
 package com.pikudo.security;
 
-import com.pikudo.entity.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -14,12 +14,12 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
-
 public class JwtService {
+
     // IMPORTANTE: En producción, esta clave secreta debe venir de un archivo de propiedades seguro (application.properties)
     // Debe tener al menos 256 bits (32 caracteres) de longitud.
     private static final String SECRET_KEY = "MiClaveSecretaSuperSeguraParaLaPolleriaPikudoChicken2026!";
-    
+
     // El token expirará en 24 horas (en milisegundos)
     private static final long JWT_EXPIRATION = 86400000;
 
@@ -74,9 +74,5 @@ public class JwtService {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    public String generateToken(Usuario guardado) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 }

@@ -30,6 +30,11 @@ import java.util.Collections;
 @AllArgsConstructor
 @Builder
 public class Usuario implements UserDetails {
+    static {
+    System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    System.out.println("ESTA ES LA CLASE USUARIO QUE SE ESTÁ EJECUTANDO");
+    System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+}
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

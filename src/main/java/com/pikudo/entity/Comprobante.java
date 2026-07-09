@@ -1,6 +1,7 @@
 package com.pikudo.entity;
 
 import com.pikudo.entity.caja.TransaccionPago;
+import com.pikudo.entity.EstadoComprobante;
 import jakarta.persistence.Index;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -82,7 +83,12 @@ public class Comprobante {
     @Builder.Default
     @Column(name = "fecha_emision", nullable = false)
     private LocalDateTime fechaEmision = LocalDateTime.now(); // Fecha y hora exacta del pago definitivo
-
+    
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EstadoComprobante estado = EstadoComprobante.EMITIDO;
+    
     @Builder.Default
     @OneToMany(mappedBy = "comprobante", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransaccionPago> pagos = new ArrayList<>();

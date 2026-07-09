@@ -2,8 +2,11 @@ package com.pikudo.service.impl;
 
 import com.pikudo.dto.usuario.UsuarioRequestDTO;
 import com.pikudo.dto.usuario.UsuarioResponseDTO;
+import com.pikudo.dto.usuario.UsuarioUpdateRequestDTO;
 import com.pikudo.entity.Rol;
 import com.pikudo.entity.Usuario;
+import com.pikudo.exception.BusinessException;
+import com.pikudo.exception.ResourceNotFoundException;
 import com.pikudo.mapper.UsuarioMapper;
 import com.pikudo.repository.RolRepository;
 import com.pikudo.repository.UsuarioRepository;
@@ -23,25 +26,29 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
-    private final UsuarioMapper usuarioMapper; // Inyectado para limpieza de código
+    private final UsuarioMapper usuarioMapper;
 
     @Override
     @Transactional
     public UsuarioResponseDTO crear(UsuarioRequestDTO dto) {
         if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso");
+            throw new BusinessException("El username '" + dto.getUsername() + "' ya está en uso");
         }
-        
+
         Rol rol = rolRepository.findById(dto.getRolId())
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado con id: " + dto.getRolId()));
-        
+                .orElseThrow(() -> new BusinessException("Rol no encontrado con id: " + dto.getRolId()));
+
         Usuario usuario = Usuario.builder()
                 .username(dto.getUsername())
                 .password(passwordEncoder.encode(dto.getPassword()))
+                .nombre(dto.getNombre())
+                .apellido(dto.getApellido())
+                .dni(dto.getDni())
+                .telefono(dto.getTelefono())
                 .rol(rol)
                 .estado(true)
                 .build();
-        
+
         return usuarioMapper.toDTO(usuarioRepository.save(usuario));
     }
 
@@ -65,22 +72,29 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional(readOnly = true)
     public UsuarioResponseDTO buscarPorId(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         return usuarioMapper.toDTO(usuario);
     }
 
     @Override
     @Transactional
-    public UsuarioResponseDTO actualizar(Long id, UsuarioRequestDTO dto) {
+    public UsuarioResponseDTO actualizar(Long id, UsuarioUpdateRequestDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         Rol rol = rolRepository.findById(dto.getRolId())
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado con id: " + dto.getRolId()));
-        
+                .orElseThrow(() -> new BusinessException("Rol no encontrado con id: " + dto.getRolId()));
+
         usuario.setUsername(dto.getUsername());
-        usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
+        usuario.setNombre(dto.getNombre());
+        usuario.setApellido(dto.getApellido());
+        usuario.setDni(dto.getDni());
+        usuario.setTelefono(dto.getTelefono());
         usuario.setRol(rol);
-        
+
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            usuario.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
         return usuarioMapper.toDTO(usuarioRepository.save(usuario));
     }
 
@@ -88,7 +102,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional
     public void desactivar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         usuario.setEstado(false);
         usuarioRepository.save(usuario);
     }

@@ -7,7 +7,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/consulta")
-@CrossOrigin(origins = "*")
+
 public class ConsultaRucController {
 
     // Simulación o puente rápido para consultar datos de SUNAT/RENIEC mediante API externa
