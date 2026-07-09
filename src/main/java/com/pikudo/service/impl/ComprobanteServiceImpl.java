@@ -4,6 +4,7 @@ import com.pikudo.dto.comprobante.AnularComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteResponseDTO;
 import com.pikudo.dto.comprobante.NotaCreditoResponseDTO;
+import com.pikudo.dto.sunat.ResultadoEnvioSunatDTO;
 import com.pikudo.entity.*;
 import com.pikudo.entity.caja.TransaccionPago;
 import com.pikudo.exception.BusinessException;
@@ -14,6 +15,7 @@ import com.pikudo.repository.NotaCreditoRepository;
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.repository.UsuarioRepository;
 import com.pikudo.service.ComprobanteService;
+import com.pikudo.service.FacturacionElectronicaService;
 import com.pikudo.service.InventarioService;
 import com.pikudo.service.PagoService;
 import com.pikudo.service.TicketPrinterService;
@@ -47,6 +49,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     private final TicketPrinterService ticketPrinterService;
     private final PagoService pagoService;
     private final InventarioService inventarioService;
+    private final FacturacionElectronicaService facturacionElectronicaService;
     private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
 
     @Override
@@ -80,7 +83,11 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                     .montoTotal(montoTotal)
                     .ruc(dto.getRuc())
                     .razonSocial(dto.getRazonSocial())
+                    .tipoDocumentoCliente(dto.getTipoDocumentoCliente())
+                    .numeroDocumentoCliente(dto.getNumeroDocumentoCliente())
+                    .direccionCliente(dto.getDireccionCliente())
                     .estado(EstadoComprobante.EMITIDO)
+                    .estadoSunat(EstadoSunat.NO_ENVIADO)
                     .build();
 
             List<TransaccionPago> transacciones = pagoService.procesarPagos(comprobante, dto.getPagos(), montoTotal);
@@ -97,6 +104,18 @@ public class ComprobanteServiceImpl implements ComprobanteService {
 
         for (DetallePedido detalle : pedido.getDetalles()) {
             inventarioService.descontarStockPorVenta(detalle.getProducto().getId(), detalle.getCantidad());
+        }
+
+        try {
+            ResultadoEnvioSunatDTO resultado = facturacionElectronicaService.enviarComprobante(guardado);
+            guardado.setEstadoSunat(resultado.getEstado());
+            guardado.setHashSunat(resultado.getHash());
+            guardado.setMensajeSunat(resultado.getMensaje());
+            guardado.setUrlPdfSunat(resultado.getUrlPdf());
+            comprobanteRepository.save(guardado);
+        } catch (Exception e) {
+            log.error("Fallo al enviar comprobante {}-{} a SUNAT: {}. La venta ya está registrada de todas formas.",
+                    guardado.getSerie(), guardado.getCorrelativo(), e.getMessage(), e);
         }
 
         if (tipo == TipoComprobante.FACTURA) {
@@ -148,16 +167,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
 
         Pedido pedido = comprobante.getPedido();
 
-        // 1. Revertir el stock que se descontó al emitir
         for (DetallePedido detalle : pedido.getDetalles()) {
             inventarioService.revertirStockPorCancelacion(detalle.getProducto().getId(), detalle.getCantidad());
         }
 
-        // 2. El pedido queda cancelado (la venta se deshizo)
         pedido.setEstado(EstadoPedido.CANCELLED);
         pedidoRepository.save(pedido);
 
-        // 3. Generar la Nota de Crédito con correlativo protegido (mismo patrón que el comprobante)
         NotaCredito guardada;
         try {
             String correlativo = String.format("%08d", notaCreditoRepository.count() + 1);
@@ -168,6 +184,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                     .motivo(dto.getMotivo())
                     .montoDevuelto(comprobante.getMontoTotal())
                     .usuarioEmisor(usuario)
+                    .estadoSunat(EstadoSunat.NO_ENVIADO)
                     .build();
 
             guardada = notaCreditoRepository.save(notaCredito);
@@ -175,11 +192,20 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             throw new BusinessException("Se produjo una colisión al generar la nota de crédito. Intenta nuevamente.");
         }
 
-        // 4. Marcar el comprobante como ANULADO
         comprobante.setEstado(EstadoComprobante.ANULADO);
         comprobanteRepository.save(comprobante);
 
-        // 5. Imprimir (no debe tumbar la transacción si la impresora falla — ya protegido en TicketPrinterServiceImpl)
+        try {
+            ResultadoEnvioSunatDTO resultado = facturacionElectronicaService.enviarNotaCredito(guardada);
+            guardada.setEstadoSunat(resultado.getEstado());
+            guardada.setHashSunat(resultado.getHash());
+            guardada.setMensajeSunat(resultado.getMensaje());
+            notaCreditoRepository.save(guardada);
+        } catch (Exception e) {
+            log.error("Fallo al enviar nota de crédito {}-{} a SUNAT: {}",
+                    guardada.getSerie(), guardada.getCorrelativo(), e.getMessage(), e);
+        }
+
         ticketPrinterService.imprimirNotaCredito(guardada);
 
         log.warn("Comprobante #{} anulado por usuario '{}'. Motivo: {}", comprobanteId, username, dto.getMotivo());

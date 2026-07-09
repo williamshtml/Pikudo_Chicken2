@@ -36,7 +36,6 @@ public class ComprobanteController {
         return ResponseEntity.ok(comprobanteService.buscarPorId(id));
     }
 
-    // Historial de ventas. Ej: GET /api/comprobantes/historial?desde=2026-07-01&hasta=2026-07-08
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
     @GetMapping("/historial")
     public ResponseEntity<List<ComprobanteResponseDTO>> listarPorRangoFechas(
@@ -45,7 +44,6 @@ public class ComprobanteController {
         return ResponseEntity.ok(comprobanteService.listarPorRangoFechas(desde, hasta));
     }
 
-    // NUEVO: anular un comprobante ya emitido (genera Nota de Crédito)
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
     @PostMapping("/{id}/anular")
     public ResponseEntity<NotaCreditoResponseDTO> anular(

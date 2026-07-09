@@ -15,9 +15,7 @@ public class NotaCreditoMapper {
                 .correlativo(nc.getCorrelativo())
                 .motivo(nc.getMotivo())
                 .montoDevuelto(nc.getMontoDevuelto())
-                .usuarioEmisor(nc.getUsuarioEmisor() != null
-                        ? nc.getUsuarioEmisor().getNombre() + " " + nc.getUsuarioEmisor().getApellido()
-                        : "Sistema")
+                .usuarioEmisor(nc.getUsuarioEmisor() != null ? nc.getUsuarioEmisor().getUsername() : "Sistema")
                 .fechaEmision(nc.getFechaEmision())
                 .build();
     }

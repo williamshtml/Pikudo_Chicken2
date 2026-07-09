@@ -30,7 +30,7 @@ public class NotaCredito {
     @NotNull(message = "El comprobante es obligatorio")
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "comprobante_id", nullable = false, unique = true)
-    private Comprobante comprobante; // El comprobante que esta nota anula
+    private Comprobante comprobante;
 
     @NotBlank
     @Column(nullable = false, length = 10)
@@ -47,13 +47,24 @@ public class NotaCredito {
 
     @NotNull
     @Column(name = "monto_devuelto", nullable = false, precision = 10, scale = 2)
-    private BigDecimal montoDevuelto; // Coincide con el total del comprobante anulado
+    private BigDecimal montoDevuelto;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_emisor_id")
-    private Usuario usuarioEmisor; // Quién autorizó/ejecutó la anulación
+    private Usuario usuarioEmisor;
 
     @Builder.Default
     @Column(name = "fecha_emision", nullable = false)
     private LocalDateTime fechaEmision = LocalDateTime.now();
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_sunat", length = 30)
+    private EstadoSunat estadoSunat = EstadoSunat.NO_ENVIADO;
+
+    @Column(name = "hash_sunat", length = 100)
+    private String hashSunat;
+
+    @Column(name = "mensaje_sunat", length = 500)
+    private String mensajeSunat;
 }

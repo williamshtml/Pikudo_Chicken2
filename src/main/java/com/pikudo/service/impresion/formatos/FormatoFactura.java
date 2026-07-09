@@ -9,11 +9,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Arma el contenido de la factura (formato ticket termico 80mm).
- * Se diferencia de la boleta porque incluye los datos del cliente
- * corporativo (RUC y razon social).
- *
- * NOTA: mismo caso que FormatoBoleta respecto al QR de SUNAT (ver ese archivo).
+ * Arma el contenido de la factura electronica (formato ticket termico 80mm).
+ * Misma estructura que FormatoBoleta, agregando los datos del cliente
+ * (RUC y Razon Social), obligatorios en toda factura.
  */
 @Component
 public class FormatoFactura {
@@ -50,11 +48,16 @@ public class FormatoFactura {
             out.write(LEFT);
             escribir(out, "Fecha: " + comprobante.getFechaEmision() + "\n");
             escribir(out, "Pedido: #" + comprobante.getPedido().getId() + "\n");
-            escribir(out, "\n");
+            escribir(out, "--------------------------------\n");
 
-            // Datos del cliente corporativo - unico bloque que distingue a la factura
-            escribir(out, "Cliente  : " + valorOGuion(comprobante.getRazonSocial()) + "\n");
-            escribir(out, "RUC      : " + valorOGuion(comprobante.getRuc()) + "\n");
+            out.write(BOLD_ON);
+            escribir(out, "CLIENTE\n");
+            out.write(BOLD_OFF);
+            escribir(out, "RUC: " + valorODefecto(comprobante.getRuc()) + "\n");
+            escribir(out, "Razon Social: " + valorODefecto(comprobante.getRazonSocial()) + "\n");
+            if (comprobante.getDireccionCliente() != null && !comprobante.getDireccionCliente().isBlank()) {
+                escribir(out, "Direccion: " + comprobante.getDireccionCliente() + "\n");
+            }
             escribir(out, "--------------------------------\n");
 
             for (DetallePedido d : comprobante.getPedido().getDetalles()) {
@@ -64,21 +67,18 @@ public class FormatoFactura {
                         d.getSubtotal());
                 escribir(out, linea);
             }
-
             escribir(out, "--------------------------------\n");
             escribir(out, "Op. Gravada  : S/ " + comprobante.getMontoNeto() + "\n");
             escribir(out, "IGV (18%)    : S/ " + comprobante.getIgv() + "\n");
             out.write(BOLD_ON);
             escribir(out, "TOTAL        : S/ " + comprobante.getMontoTotal() + "\n");
             out.write(BOLD_OFF);
-
             escribir(out, "\n");
+
             escribir(out, "Forma de pago:\n");
             for (var pago : comprobante.getPagos()) {
                 escribir(out, "  " + pago.getMetodoPago().getNombre() + " : S/ " + pago.getMonto() + "\n");
             }
-
-            // TODO: cuando se integre un OSE/PSE, imprimir aqui el codigo QR
 
             escribir(out, "\n");
             out.write(CENTER);
@@ -90,8 +90,8 @@ public class FormatoFactura {
         return out.toByteArray();
     }
 
-    private String valorOGuion(String valor) {
-        return (valor == null || valor.isBlank()) ? "-" : valor;
+    private String valorODefecto(String valor) {
+        return (valor != null && !valor.isBlank()) ? valor : "[No especificado]";
     }
 
     private void escribir(ByteArrayOutputStream out, String texto) throws IOException {

@@ -1,7 +1,6 @@
 package com.pikudo.entity;
 
 import com.pikudo.entity.caja.TransaccionPago;
-import com.pikudo.entity.EstadoComprobante;
 import jakarta.persistence.Index;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -29,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 @Entity
 @Table(name = "comprobantes", indexes = {
     @Index(name = "idx_serie_correlativo", columnList = "serie, correlativo", unique = true)
@@ -42,54 +42,83 @@ public class Comprobante {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @NotNull(message = "El pedido es obligatorio")
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "pedido_id", nullable = false, unique = true)
-    private Pedido pedido; // Relación 1 a 1: Cada pedido tiene un único comprobante fiscal
+    private Pedido pedido;
+
     @NotNull(message = "El tipo de comprobante es obligatorio")
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", nullable = false, length = 20)
-    private TipoComprobante tipoComprobante; // BOLETA, FACTURA o TICKET_INTERNO
+    private TipoComprobante tipoComprobante;
+
     @NotBlank(message = "La serie es obligatoria")
     @Column(nullable = false, length = 10)
-    private String serie; // Ej: "B001" para boletas, "F001" para facturas
+    private String serie;
+
     @NotBlank(message = "El número correlativo es obligatorio")
     @Column(nullable = false, length = 20)
-    private String correlativo; // Ej: "00000124"
+    private String correlativo;
 
-    // NOTA: el campo "metodo_pago" (String unico) se elimino. Un comprobante ahora
-    // puede tener varios pagos (ver TransaccionPago), para soportar pagos divididos
-    // (ej: mitad efectivo, mitad Yape). Ver campo "pagos" mas abajo.
-
-    // --- DESGLOSE DE MONTOS (Finanzas exactas) ---
     @NotNull(message = "El monto neto es obligatorio")
     @PositiveOrZero(message = "El monto neto no puede ser negativo")
     @Column(name = "monto_neto", nullable = false, precision = 10, scale = 2)
-    private BigDecimal montoNeto; // Operación gravada (subtotal antes de impuestos)
+    private BigDecimal montoNeto;
+
     @NotNull(message = "El IGV es obligatorio")
     @PositiveOrZero(message = "El IGV no puede ser negativo")
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal igv; // El 18% del impuesto en Perú
+    private BigDecimal igv;
+
     @NotNull(message = "El monto total es obligatorio")
     @PositiveOrZero(message = "El monto total no puede ser negativo")
     @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
-    private BigDecimal montoTotal; // Suma de montoNeto + igv (debe coincidir con el total del Pedido)
-    // --- DATOS DE FACTURACIÓN (Opcionales: Aplica si tipoComprobante == FACTURA) ---
+    private BigDecimal montoTotal;
+
     @Pattern(regexp = "^[0-9]{11}$", message = "El RUC debe tener exactamente 11 dígitos numéricos")
     @Column(length = 11)
-    private String ruc; // RUC del cliente corporativo
+    private String ruc;
+
     @Column(name = "razon_social", length = 150)
-    private String razonSocial; // Nombre de la empresa del cliente
+    private String razonSocial;
+
     @Builder.Default
     @Column(name = "fecha_emision", nullable = false)
-    private LocalDateTime fechaEmision = LocalDateTime.now(); // Fecha y hora exacta del pago definitivo
-    
+    private LocalDateTime fechaEmision = LocalDateTime.now();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "comprobante", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TransaccionPago> pagos = new ArrayList<>();
+
+    // --- Estado interno del comprobante (emitido / anulado) ---
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoComprobante estado = EstadoComprobante.EMITIDO;
-    
+
+    // --- Integración SUNAT (se completa cuando se conecte el proveedor) ---
     @Builder.Default
-    @OneToMany(mappedBy = "comprobante", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TransaccionPago> pagos = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_sunat", length = 30)
+    private EstadoSunat estadoSunat = EstadoSunat.NO_ENVIADO;
+
+    @Column(name = "hash_sunat", length = 100)
+    private String hashSunat;
+
+    @Column(name = "mensaje_sunat", length = 500)
+    private String mensajeSunat;
+
+    @Column(name = "url_pdf_sunat", length = 500)
+    private String urlPdfSunat;
+
+    // --- Datos del cliente (algunos proveedores piden DNI incluso en boleta) ---
+    @Column(name = "tipo_documento_cliente", length = 10)
+    private String tipoDocumentoCliente;
+
+    @Column(name = "numero_documento_cliente", length = 15)
+    private String numeroDocumentoCliente;
+
+    @Column(name = "direccion_cliente", length = 255)
+    private String direccionCliente;
 }

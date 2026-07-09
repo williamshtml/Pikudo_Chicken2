@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NotaCreditoRepository extends JpaRepository<NotaCredito, Long> {
-    long count(); // usado para generar el correlativo
+    long count();
 }
