@@ -20,18 +20,20 @@ public class PedidoResponseDTO {
 
     private Long id;
     private Integer mesaNumero;
+    private String tipoPedido; // Clave para que el front sepa si es DELIVERY o MESA
     
     // --- CAMPOS DE TRAZABILIDAD DE ROLES ---
     private String cajeroNombre;      // Quién cobró
-    private String responsableNombre; // Quién atendió (Sheyla, Rolando, etc.)
+    private String responsableNombre; // Quién atendió (Mesero, Repartidor, etc.)
     private String responsableRol;    // "Mesero", "Repartidor" o "Venta Directa"
-    private String usuarioNombre; // <--- AGREGA ESTO de vuelta para que desaparezcan los errores en tu mapper
     
-    // ─── NUEVOS CAMPOS PARA EL REPARTIDOR ───────────────────────────────────
+    
+    // ─── NUEVOS CAMPOS PARA EL REPARTIDOR (Estilo DidiFood) ─────────────────
     private String direccion;
     private String urlMaps;
+    private Long repartidorId;        // Necesario para enlazar el tracking del WebSocket
+    private String repartidorTelefono;// Para que el panel de caja pueda llamarlo directo
     
-// ...
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime fechaCreacion;
     

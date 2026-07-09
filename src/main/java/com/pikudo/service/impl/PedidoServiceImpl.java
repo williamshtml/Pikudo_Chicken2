@@ -3,11 +3,11 @@ package com.pikudo.service.impl;
 import com.pikudo.dto.pedido.PedidoRequestDTO;
 import com.pikudo.dto.pedido.PedidoResponseDTO;
 import com.pikudo.entity.*;
+import com.pikudo.exception.BusinessException;
 import com.pikudo.exception.ResourceNotFoundException;
 import com.pikudo.mapper.PedidoMapper;
 import com.pikudo.repository.*;
 import com.pikudo.service.PedidoService;
-import com.pikudo.service.impl.TicketPrinterServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,11 +34,8 @@ public class PedidoServiceImpl implements PedidoService {
     private final TicketPrinterServiceImpl ticketPrinterService;
     private final ImpresoraRepository impresoraRepository;
     private final PedidoMapper pedidoMapper;
-    // REVERTIDO: se quitó InventarioService de aquí.
-    // El descuento de stock ocurre en ComprobanteServiceImpl.emitir(),
-    // que es el momento correcto (cuando el pedido se cobra, no cuando se crea).
 
-    // --- METODOS DE CREACION Y ESTADO ---
+    // --- METODOS DE INTERFAZ ---
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -60,7 +57,6 @@ public class PedidoServiceImpl implements PedidoService {
         if ("DELIVERY".equals(tipo)) {
             pedido.setEstado(EstadoPedido.PENDING);
             pedido.setDireccion(dto.getDireccion());
-
             if (dto.getDireccion() != null && !dto.getDireccion().isBlank()) {
                 String urlFormateada = "https://www.google.com/maps/search/?api=1&query="
                         + URLEncoder.encode(dto.getDireccion(), StandardCharsets.UTF_8);
@@ -72,20 +68,16 @@ public class PedidoServiceImpl implements PedidoService {
 
         BigDecimal totalAcumulado = BigDecimal.ZERO;
         List<DetallePedido> detallesEntidad = new ArrayList<>();
-
         if (dto.getDetalles() != null) {
             for (PedidoRequestDTO.DetalleItemDTO itemDto : dto.getDetalles()) {
                 Producto producto = productoRepository.findById(itemDto.getProductoId())
                         .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + itemDto.getProductoId()));
-
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(producto);
                 detalle.setCantidad(itemDto.getCantidad());
                 detalle.setPrecioUnitario(producto.getPrecio());
-                detalle.setObservaciones(itemDto.getObservaciones());
                 detalle.setSubtotal(producto.getPrecio().multiply(BigDecimal.valueOf(itemDto.getCantidad())));
-
                 totalAcumulado = totalAcumulado.add(detalle.getSubtotal());
                 detallesEntidad.add(detalle);
             }
@@ -94,35 +86,12 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.setDetalles(detallesEntidad);
 
         Pedido guardado = pedidoRepository.save(pedido);
-
-        // REVERTIDO: se quitó la llamada a inventarioService.descontarStockPorVenta() de aquí.
-        // Ya existe en ComprobanteServiceImpl.emitir() y no debe duplicarse.
-
         ticketPrinterService.imprimirTicketsPorArea(guardado);
-
         PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
 
         if ("DELIVERY".equals(guardado.getTipoPedido())) {
             template.convertAndSend("/topic/repartidores", response);
         }
-
-        return response;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Usuario user = usuarioRepository.findByUsername(username).orElseThrow();
-        Pedido pedido = pedidoRepository.findById(id).orElseThrow();
-
-        if (nuevoEstado == EstadoPedido.PAID) pedido.setCajero(user);
-
-        pedido.setEstado(nuevoEstado);
-        Pedido actualizado = pedidoRepository.save(pedido);
-        PedidoResponseDTO response = pedidoMapper.toDTO(actualizado);
-
-        template.convertAndSend("/topic/pedidos", response);
         return response;
     }
 
@@ -130,27 +99,17 @@ public class PedidoServiceImpl implements PedidoService {
     @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO tomarPedido(Long id) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Usuario repartidor = usuarioRepository.findByUsername(username).orElseThrow();
-        Pedido p = pedidoRepository.findById(id).orElseThrow();
-
-        p.setRepartidor(repartidor);
-        p.setEstado(EstadoPedido.ON_DELIVERY);
-
-        Pedido guardado = pedidoRepository.save(p);
-
-        impresoraRepository.findByAreaAndActivaTrue(AreaPreparacion.CAJA)
-                .ifPresentOrElse(
-                        impresoraCaja -> ticketPrinterService.imprimirPrecuentaDelivery(guardado, impresoraCaja),
-                        () -> { /* silencioso */ }
-                );
-
-        PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
-
-        template.convertAndSend("/topic/pedidos", response);
-        return response;
+        Usuario motorizado = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        
+        Pedido pedido = pedidoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+        
+        pedido.setRepartidor(motorizado);
+        pedido.setEstado(EstadoPedido.ON_DELIVERY);
+        return pedidoMapper.toDTO(pedidoRepository.save(pedido));
     }
 
-    // --- METODOS DE CONSULTA ---
     @Override
     public List<PedidoResponseDTO> listarTodos() {
         return pedidoRepository.findAll().stream().map(pedidoMapper::toDTO).collect(Collectors.toList());
@@ -174,21 +133,39 @@ public class PedidoServiceImpl implements PedidoService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public PedidoResponseDTO cambiarEstado(Long id, EstadoPedido nuevoEstado) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Usuario user = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        
+        Pedido pedido = pedidoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+        // REGLA DIDIFOOD
+        if (user.getRol() != null && user.getRol().getNombre() != null && user.getRol().getNombre().name().equals("MOTORIZADO")) {
+            if (pedido.getRepartidor() == null || !pedido.getRepartidor().getUsername().equals(username)) {
+                throw new BusinessException("No tienes permiso para modificar este pedido porque no te está asignado.");
+            }
+            if (nuevoEstado == EstadoPedido.DELIVERED && pedido.getEstado() != EstadoPedido.ON_DELIVERY) {
+                throw new BusinessException("El pedido debe estar en camino (ON_DELIVERY) antes de ser entregado.");
+            }
+        }
+
+        if (nuevoEstado == EstadoPedido.PAID) pedido.setCajero(user);
+        pedido.setEstado(nuevoEstado);
+        
+        Pedido actualizado = pedidoRepository.save(pedido);
+        PedidoResponseDTO response = pedidoMapper.toDTO(actualizado);
+        template.convertAndSend("/topic/pedidos", response);
+        return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void cancelar(Long id) {
         Pedido p = pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
-
-        // REVERTIDO: se quitó la reversión de stock de aquí.
-        // Como el stock nunca se descuenta al crear el pedido (solo al emitir
-        // el comprobante), cancelar un pedido no pagado no debe tocar el inventario.
-        // Si en el futuro se permite cancelar un pedido YA PAGADO (con comprobante
-        // emitido), ahí sí habría que revertir stock — pero eso es un caso de
-        // "anulación de comprobante", no de cancelación de pedido. Lo dejamos
-        // pendiente para cuando revisemos ese flujo específico.
-
         p.setEstado(EstadoPedido.CANCELLED);
-        Pedido actualizado = pedidoRepository.save(p);
-
-        template.convertAndSend("/topic/pedidos", pedidoMapper.toDTO(actualizado));
+        pedidoRepository.save(p);
     }
 }

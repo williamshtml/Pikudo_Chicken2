@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface PedidoService {
     PedidoResponseDTO crear(PedidoRequestDTO dto);
-    PedidoResponseDTO tomarPedido(Long id); // <--- AGREGADO
+    PedidoResponseDTO tomarPedido(Long id); 
     List<PedidoResponseDTO> listarTodos();
     List<PedidoResponseDTO> listarPorEstado(EstadoPedido estado);
     List<PedidoResponseDTO> listarAbiertosPorMesa(Long mesaId, EstadoPedido estadoExcluido);
