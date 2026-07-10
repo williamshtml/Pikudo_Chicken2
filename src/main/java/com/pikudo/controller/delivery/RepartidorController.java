@@ -1,4 +1,4 @@
-package com.pikudo.controller;
+package com.pikudo.controller.delivery;
 
 import com.pikudo.dto.tracking.RepartidorEstadoDTO;
 import com.pikudo.entity.Rol.TipoRol;

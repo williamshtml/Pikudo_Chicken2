@@ -5,21 +5,22 @@ import com.pikudo.dto.pedido.PedidoResponseDTO;
 import com.pikudo.entity.EstadoPedido;
 import com.pikudo.service.PedidoService;
 import jakarta.validation.Valid;
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*; // <-- ¡Este era el import que faltaba!
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/pedidos")
+@RequiredArgsConstructor // <-- Adiós @Autowired, esta es la forma profesional actual
 public class PedidoController {
 
-    @Autowired
-    private PedidoService pedidoService;
+    private final PedidoService pedidoService; // <-- Atributo final, más seguro y rápido
 
-    // 1. CREAR UN NUEVO PEDIDO (Mesa envía comanda)
+    // 1. CREAR UN NUEVO PEDIDO (Mesa envía comanda o entra por app)
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO', 'MOZO')")
     @PostMapping
     public ResponseEntity<PedidoResponseDTO> crearPedido(@Valid @RequestBody PedidoRequestDTO dto) {

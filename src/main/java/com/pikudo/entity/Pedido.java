@@ -1,42 +1,57 @@
 package com.pikudo.entity;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-// Importaciones específicas, nada de asteriscos
 import lombok.Getter;
 import lombok.Setter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
 @Entity
 @Table(name = "pedidos")
 @Getter 
 @Setter 
-@Builder // Si lo usas en el mapper, lo mantenemos explícito
-@NoArgsConstructor // Muy útil para JPA sin ensuciar
+@Builder
+@NoArgsConstructor
 @AllArgsConstructor
 public class Pedido extends Auditable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // ─── CONTROL DE CONCURRENCIA (El blindaje) ─────────────────────────────
+    // Spring manejará esto solo. Si 2 chocan, lanza OptimisticLockException
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mesa_id")
     private Mesa mesa;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mesero_id")
     private Usuario mesero;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cajero_id")
     private Usuario cajero;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repartidor_id")
     private Usuario repartidor;
+
     @Builder.Default
     @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
+
     @Builder.Default
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -53,19 +68,16 @@ public class Pedido extends Auditable {
     // ─── CAMPOS ADICIONALES PARA DELIVERY ────────────────────────────────────
     @Column(name = "direccion", length = 255)
     private String direccion;
+    
     @Column(name = "url_maps", length = 500)
     private String urlMaps;
 
-    // ─── datos de contacto/nota del cliente ──
+    // ─── DATOS DE CONTACTO/NOTA DEL CLIENTE ──────────────────────────────────
     @Column(name = "telefono_cliente", length = 20)
     private String telefonoCliente;
 
     @Column(name = "observaciones_pedido", length = 250)
     private String observacionesPedido;
-
-    // NOTA: se elimino el campo "metodoPago" que tenia Pedido. Ahora el metodo
-    // (o metodos, si el pago es dividido) de pago vive en TransaccionPago,
-    // asociado al Comprobante. Ver Comprobante.pagos.
 
     @Builder.Default
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)

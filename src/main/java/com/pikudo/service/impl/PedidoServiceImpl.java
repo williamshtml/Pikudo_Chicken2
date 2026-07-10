@@ -35,8 +35,6 @@ public class PedidoServiceImpl implements PedidoService {
     private final ImpresoraRepository impresoraRepository;
     private final PedidoMapper pedidoMapper;
 
-    // --- METODOS DE INTERFAZ ---
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PedidoResponseDTO crear(PedidoRequestDTO dto) {
@@ -89,6 +87,7 @@ public class PedidoServiceImpl implements PedidoService {
         ticketPrinterService.imprimirTicketsPorArea(guardado);
         PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
 
+        // Disparamos al canal general (esto después lo filtramos por zona si crece mucho)
         if ("DELIVERY".equals(guardado.getTipoPedido())) {
             template.convertAndSend("/topic/repartidores", response);
         }
@@ -104,10 +103,26 @@ public class PedidoServiceImpl implements PedidoService {
         
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
+
+        // Validar que nadie más lo haya tomado ya (o que no esté cancelado)
+        if (pedido.getRepartidor() != null) {
+            throw new BusinessException("Este pedido ya fue asignado a otro motorizado.");
+        }
+        if (pedido.getEstado() == EstadoPedido.CANCELLED) {
+            throw new BusinessException("No puedes tomar un pedido cancelado.");
+        }
         
         pedido.setRepartidor(motorizado);
-        pedido.setEstado(EstadoPedido.ON_DELIVERY);
-        return pedidoMapper.toDTO(pedidoRepository.save(pedido));
+        // Cuando lo toma, significa que ya va a salir con él
+        pedido.setEstado(EstadoPedido.ON_DELIVERY); 
+        
+        Pedido guardado = pedidoRepository.save(pedido);
+        PedidoResponseDTO response = pedidoMapper.toDTO(guardado);
+        
+        // Avisar a todos que este pedido ya cambió de estado (para que desaparezca de la lista de disponibles)
+        template.convertAndSend("/topic/pedidos", response);
+        
+        return response;
     }
 
     @Override
@@ -141,21 +156,21 @@ public class PedidoServiceImpl implements PedidoService {
         Pedido pedido = pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
-        // REGLA DIDIFOOD
-        if (user.getRol() != null && user.getRol().getNombre() != null && user.getRol().getNombre().name().equals("MOTORIZADO")) {
+        // REGLA ESTRICTA DE REPARTIDORES
+        if (user.getRol() != null && "MOTORIZADO".equals(user.getRol().getNombre().name())) {
             if (pedido.getRepartidor() == null || !pedido.getRepartidor().getUsername().equals(username)) {
-                throw new BusinessException("No tienes permiso para modificar este pedido porque no te está asignado.");
+                throw new BusinessException("No puedes modificar un pedido que no tienes asignado.");
             }
             if (nuevoEstado == EstadoPedido.DELIVERED && pedido.getEstado() != EstadoPedido.ON_DELIVERY) {
-                throw new BusinessException("El pedido debe estar en camino (ON_DELIVERY) antes de ser entregado.");
+                throw new BusinessException("Debes estar en camino (ON_DELIVERY) para poder marcarlo como entregado.");
             }
         }
 
-        if (nuevoEstado == EstadoPedido.PAID) pedido.setCajero(user);
         pedido.setEstado(nuevoEstado);
         
         Pedido actualizado = pedidoRepository.save(pedido);
         PedidoResponseDTO response = pedidoMapper.toDTO(actualizado);
+        
         template.convertAndSend("/topic/pedidos", response);
         return response;
     }
@@ -166,6 +181,8 @@ public class PedidoServiceImpl implements PedidoService {
         Pedido p = pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
         p.setEstado(EstadoPedido.CANCELLED);
-        pedidoRepository.save(p);
+        
+        Pedido actualizado = pedidoRepository.save(p);
+        template.convertAndSend("/topic/pedidos", pedidoMapper.toDTO(actualizado));
     }
 }
