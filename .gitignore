@@ -9,6 +9,17 @@ target/
 *.jar
 *.war
 
+# --- Environment files with secrets ---
+.env
+.env.local
+.env.docker
+.env.dev
+.env.prod
+!.env.local.example
+!.env.docker.example
+!.env.dev.example
+!.env.prod.example
+
 # --- Frontend (Angular) ---
 node_modules/
 dist/
