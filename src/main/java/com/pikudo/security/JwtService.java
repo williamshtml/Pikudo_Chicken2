@@ -1,12 +1,15 @@
 package com.pikudo.security;
 
+import com.pikudo.config.JwtConfig;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,18 +19,23 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // IMPORTANTE: En producción, esta clave secreta debe venir de un archivo de propiedades seguro (application.properties)
-    // Debe tener al menos 256 bits (32 caracteres) de longitud.
-    private static final String SECRET_KEY = "MiClaveSecretaSuperSeguraParaLaPolleriaPikudoChicken2026!";
+    private final JwtConfig jwtConfig;
 
-    // El token expirará en 24 horas (en milisegundos)
-    private static final long JWT_EXPIRATION = 86400000;
-
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    public JwtService(JwtConfig jwtConfig) {
+        this.jwtConfig = jwtConfig;
     }
 
-    // Extrae el nombre de usuario (subject) del token
+    @PostConstruct
+    void validateSecret() {
+        if (jwtConfig.getSecret() == null || jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("jwt.secret/JWT_SECRET debe tener al menos 32 bytes");
+        }
+    }
+
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8));
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -37,10 +45,8 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    // Genera un token simple basado únicamente en los detalles del usuario
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-        // Aquí puedes meter los roles en los claims si tu compañero lo requiere en el frontend
         return generateToken(extraClaims, userDetails);
     }
 
@@ -49,15 +55,14 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
+                .setExpiration(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // Verifica si el token pertenece al usuario y no ha expirado
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

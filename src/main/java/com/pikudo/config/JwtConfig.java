@@ -14,7 +14,7 @@ public class JwtConfig {
      * Lee la propiedad 'jwt.secret' desde tu archivo application.yml o application.properties.
      * Esta es la firma criptográfica con la que se aseguran los tokens de la pollería.
      */
-    @Value("${jwt.secret:ClaveSecretaSuperSeguraParaLaPolleriaPikudo2026*}")
+    @Value("${jwt.secret}")
     private String secret;
 
     /*
