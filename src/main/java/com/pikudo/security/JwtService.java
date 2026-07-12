@@ -50,6 +50,10 @@ public class JwtService {
         return generateToken(extraClaims, userDetails);
     }
 
+    public long getExpirationMillis() {
+        return jwtConfig.getExpiration();
+    }
+
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
                 .setClaims(extraClaims)

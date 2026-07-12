@@ -20,8 +20,10 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
+
 @Entity
 @Table(name = "usuarios")
 @Getter
@@ -73,12 +75,17 @@ public class Usuario implements UserDetails {
     // --- MÉTODOS DE USERDETAILS ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        List<GrantedAuthority> authorities = new ArrayList<>();
         if (this.rol != null && this.rol.getNombre() != null) {
-            return Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + this.rol.getNombre().name())
-            );
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + this.rol.getNombre().name()));
+            if (this.rol.getPermissions() != null) {
+                this.rol.getPermissions().stream()
+                        .filter(permission -> Boolean.TRUE.equals(permission.getEnabled()))
+                        .map(permission -> new SimpleGrantedAuthority(permission.getCode()))
+                        .forEach(authorities::add);
+            }
         }
-        return Collections.emptyList();
+        return authorities;
     }
     @Override
     public String getPassword() {

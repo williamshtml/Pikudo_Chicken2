@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     // NUEVO: captura los errores de @Valid (@NotBlank, @Size, @NotNull, etc. en los DTOs)
-    // Devuelve un mapa campo -> mensaje, para que el frontend Angular pueda
+    // Devuelve un mapa campo -> mensaje, para que cualquier cliente pueda
     // mostrar el error exacto junto al input correspondiente.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> manejarValidacion(MethodArgumentNotValidException ex) {

@@ -1,13 +1,15 @@
 package com.pikudo.service;
+
+import com.pikudo.dto.auth.AuthMeResponseDTO;
 import com.pikudo.dto.auth.AuthResponseDTO;
 import com.pikudo.dto.auth.LoginRequestDTO;
+import com.pikudo.dto.auth.RefreshTokenRequestDTO;
+import com.pikudo.entity.Usuario;
+import jakarta.servlet.http.HttpServletRequest;
 
-/**
- * El registro de personal se movio a UsuarioService.crear(), protegido con
- * @PreAuthorize("hasRole('ADMINISTRADOR')") en UsuarioController. AuthService
- * solo maneja login: la creacion de cuentas es una accion administrativa,
- * no un flujo publico de autenticacion.
- */
 public interface AuthService {
-    AuthResponseDTO login(LoginRequestDTO dto);
+    AuthResponseDTO login(LoginRequestDTO dto, HttpServletRequest request);
+    AuthResponseDTO refresh(RefreshTokenRequestDTO dto, HttpServletRequest request);
+    void logout(RefreshTokenRequestDTO dto, HttpServletRequest request);
+    AuthMeResponseDTO me(Usuario usuario);
 }

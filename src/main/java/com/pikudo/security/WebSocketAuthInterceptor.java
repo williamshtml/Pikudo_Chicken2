@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
  * el handshake de WebSocket necesita su propia validacion a nivel de mensaje CONNECT.
  *
  * El token se espera en el header STOMP "Authorization: Bearer <token>",
- * que el cliente (Angular) debe enviar al conectar, igual que en las peticiones REST.
+ * que el cliente debe enviar al conectar, igual que en las peticiones REST.
  */
 @Component
 @RequiredArgsConstructor

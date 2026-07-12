@@ -1,21 +1,22 @@
 package com.pikudo.controller;
+
+import com.pikudo.dto.auth.AuthMeResponseDTO;
 import com.pikudo.dto.auth.AuthResponseDTO;
 import com.pikudo.dto.auth.LoginRequestDTO;
+import com.pikudo.dto.auth.RefreshTokenRequestDTO;
+import com.pikudo.entity.Usuario;
 import com.pikudo.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Solo login. La creacion de cuentas de personal (register) se movio a
- * UsuarioController, protegida con @PreAuthorize("hasRole('ADMINISTRADOR')").
- *
- * Motivo: un sistema de punto de venta no debe permitir auto-registro publico
- * con eleccion libre de rol - eso permitiria que cualquiera se cree una cuenta
- * de ADMINISTRADOR. La creacion de personal es una accion administrativa,
- * como en cualquier POS profesional (Toast, Square, etc.).
- */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -23,7 +24,32 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO credentials) {
-        return ResponseEntity.ok(authService.login(credentials));
+    public ResponseEntity<AuthResponseDTO> login(
+            @Valid @RequestBody LoginRequestDTO credentials,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.ok(authService.login(credentials, request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDTO> refresh(
+            @Valid @RequestBody RefreshTokenRequestDTO refreshToken,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.ok(authService.refresh(refreshToken, request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody RefreshTokenRequestDTO refreshToken,
+            HttpServletRequest request
+    ) {
+        authService.logout(refreshToken, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthMeResponseDTO> me(@AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(authService.me(usuario));
     }
 }

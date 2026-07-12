@@ -1,21 +1,27 @@
 package com.pikudo.dto.auth;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.Builder; // <-- Importante añadir esto
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder // <-- Añade esto para construirlo fácil en el Service
-public class AuthResponseDTO {          
+@Builder
+public class AuthResponseDTO {
 
     private Long id;
     private String username;
-    private String nombreCompleto; 
+    private String nombreCompleto;
     private String rolNombre;
     private String token;
+    private String refreshToken;
+    private String tokenType;
+    private Long expiresInMillis;
+    private List<String> permisos;
 }
