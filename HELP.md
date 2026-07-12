@@ -1,34 +1,40 @@
-# Getting Started
+# Pikudo Chicken Backend - Help
 
-### Reference Documentation
-For further reference, please consider the following sections:
+Backend Spring Boot para la operacion self-hosted de Pikudo Chicken.
 
-* [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
-* [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/3.5.14/maven-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.5.14/maven-plugin/build-image.html)
-* [Spring Web](https://docs.spring.io/spring-boot/3.5.14/reference/web/servlet.html)
-* [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.14/reference/data/sql.html#data.sql.jpa-and-spring-data)
-* [Spring Security](https://docs.spring.io/spring-boot/3.5.14/reference/web/spring-security.html)
-* [Validation](https://docs.spring.io/spring-boot/3.5.14/reference/io/validation.html)
-* [Spring Boot DevTools](https://docs.spring.io/spring-boot/3.5.14/reference/using/devtools.html)
+## Estado tecnico actual
 
-### Guides
-The following guides illustrate how to use some features concretely:
+- Java 21.
+- Spring Boot 3.x con Spring MVC, JPA, Security, WebSocket y Actuator.
+- PostgreSQL como base de datos principal.
+- Flyway como unico mecanismo de migracion de schema.
+- Docker Compose para API, Redis y Kafka.
+- Configuracion por perfiles y archivos `.env.*`.
 
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-* [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
-* [Accessing data with MySQL](https://spring.io/guides/gs/accessing-data-mysql/)
-* [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
-* [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
-* [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
-* [Validation](https://spring.io/guides/gs/validating-form-input/)
+## Comandos principales
 
-### Maven Parent overrides
+```powershell
+.\mvnw.cmd -q test
+.\mvnw.cmd -q -DskipTests package
+docker compose --env-file .env.docker.example config --quiet
+```
 
-Due to Maven's design, elements are inherited from the parent POM to the project POM.
-While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the parent.
-To prevent this, the project POM contains empty overrides for these elements.
-If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
+Para ejecucion local y Docker, usar [docs/run-local.md](docs/run-local.md).
 
+## Referencias utiles
+
+- [Apache Maven](https://maven.apache.org/guides/index.html)
+- [Spring Boot Maven Plugin](https://docs.spring.io/spring-boot/3.5.14/maven-plugin)
+- [Spring Web MVC](https://docs.spring.io/spring-boot/3.5.14/reference/web/servlet.html)
+- [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.14/reference/data/sql.html#data.sql.jpa-and-spring-data)
+- [Spring Security](https://docs.spring.io/spring-boot/3.5.14/reference/web/spring-security.html)
+- [Spring Boot Actuator](https://docs.spring.io/spring-boot/3.5.14/reference/actuator/index.html)
+- [Flyway](https://documentation.red-gate.com/fd)
+- [PostgreSQL](https://www.postgresql.org/docs/)
+
+## Reglas de trabajo
+
+- No usar `ddl-auto=update`.
+- No editar migraciones Flyway ya aplicadas.
+- No crear nuevas pantallas Angular.
+- No mover el backend a microservicios en esta etapa.
