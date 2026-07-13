@@ -46,7 +46,7 @@ SUNAT_ENABLED=false
 SUNAT_MODE=disabled
 ```
 
-La Fase 3 implementara los providers funcionales. Mientras tanto, estas variables documentan el contrato de configuracion.
+Los providers de Fase 3 ya existen. Si una integracion queda deshabilitada, la API debe arrancar sin secretos reales.
 
 ### Google Drive
 
@@ -62,7 +62,22 @@ DRIVE_FOLDERS_DELIVERY_EVIDENCE=
 DRIVE_FOLDERS_SUNAT_ROOT=
 ```
 
-`APP_STORAGE_PROVIDER=local` usa disco local como fallback. `APP_STORAGE_PROVIDER=google-drive` sera el provider principal cuando se implemente.
+`APP_STORAGE_PROVIDER=local` usa disco local como fallback. `APP_STORAGE_PROVIDER=google-drive` usa Google Drive cuando `GOOGLE_DRIVE_ENABLED=true`.
+
+Estructura operativa esperada en Drive:
+
+```text
+PRODUCTOS
+AVATARES_USUARIOS
+EVIDENCIAS_DELIVERY
+SUNAT/
+  FACTURAS
+  BOLETAS
+  NOTAS_DE_CREDITO
+  NOTAS_DE_DEBITO
+```
+
+La creacion real de carpetas es operativa/manual. El backend valida los folder IDs cuando `GOOGLE_DRIVE_ENABLED=true`.
 
 ### Resend
 
@@ -154,3 +169,60 @@ docker compose --env-file .env.docker.example config --quiet
 ```
 
 Flyway ejecuta automaticamente las migraciones al arrancar la aplicacion. Hibernate queda en `validate`, por lo que no crea ni modifica tablas.
+
+## Smoke manual de integraciones
+
+### Storage local
+
+Usar:
+
+```text
+APP_STORAGE_PROVIDER=local
+GOOGLE_DRIVE_ENABLED=false
+```
+
+Arrancar la API y subir una imagen con `POST /api/imagenes/subir/productos`. La respuesta debe ser `/api/files/{uuid}/content` y el archivo debe quedar registrado en `storage_files`.
+
+### Google Drive
+
+Usar:
+
+```text
+APP_STORAGE_PROVIDER=google-drive
+GOOGLE_DRIVE_ENABLED=true
+DRIVE_OAUTH_CLIENT_ID=...
+DRIVE_OAUTH_CLIENT_SECRET=...
+DRIVE_OAUTH_REFRESH_TOKEN=...
+DRIVE_FOLDERS_PRODUCTS=...
+DRIVE_FOLDERS_AVATAR_USERS=...
+DRIVE_FOLDERS_DELIVERY_EVIDENCE=...
+DRIVE_FOLDERS_SUNAT_ROOT=...
+```
+
+Arrancar la API y subir una imagen de producto. La metadata debe quedar en `storage_files` con provider `google-drive`.
+
+### Resend
+
+Usar:
+
+```text
+RESEND_ENABLED=true
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=Pikudo Chicken <no-reply@dominio-validado>
+SMTP_HOST=
+SMTP_USER=
+SMTP_PASSWORD=
+```
+
+El envio real se valida manualmente desde un flujo que use `EmailService`. No usar SMTP en esta fase.
+
+### SUNAT
+
+Para esta fase mantener:
+
+```text
+SUNAT_ENABLED=false
+SUNAT_MODE=disabled
+```
+
+Si se prueba sandbox mas adelante, completar `SUNAT_*`; la API solo valida configuracion. No emite comprobantes todavia.

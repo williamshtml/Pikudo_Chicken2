@@ -28,6 +28,20 @@ class IntegrationPropertiesTest {
     }
 
     @Test
+    void storageRequiresDriveFoldersWhenDriveIsEnabled() {
+        StorageProperties properties = new StorageProperties();
+        properties.setProvider("google-drive");
+        properties.getGoogleDrive().setEnabled(true);
+        properties.getGoogleDrive().setOauthClientId("client");
+        properties.getGoogleDrive().setOauthClientSecret("secret");
+        properties.getGoogleDrive().setOauthRefreshToken("refresh");
+
+        assertThatThrownBy(properties::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("DRIVE_FOLDERS_PRODUCTS");
+    }
+
+    @Test
     void resendDisabledDoesNotRequireApiKey() {
         ResendProperties properties = new ResendProperties();
         properties.setEnabled(false);

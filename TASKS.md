@@ -5,7 +5,8 @@
 - Fase 0 - Contexto y decisiones: completada.
 - Fase 1 - Infraestructura local: completada.
 - Fase 2 - Seguridad base: completada.
-- Fase 3 - Integraciones base y storage: activa.
+- Fase 3 - Integraciones base y storage: completada.
+- Fase 4 - Catalogo real con Drive: activa.
 
 `docs/context/07_CODEX_TASKS.md` queda como historico. Este archivo es el tablero vivo para ordenar las siguientes implementaciones.
 
@@ -56,19 +57,19 @@
 - [x] Implementar provider Google Drive con OAuth refresh token.
 - [x] Registrar metadata de archivos subidos: provider, folder, file id, url, mime type, tamano, checksum y modulo propietario.
 - [x] Migrar `ArchivoService` para usar la abstraccion de storage.
-- [ ] Preparar carpetas Drive para productos, avatares, evidencias y documentos SUNAT.
+- [x] Preparar carpetas Drive para productos, avatares, evidencias y documentos SUNAT.
 - [x] Agregar cliente Resend API deshabilitable por env.
 - [x] Preparar configuracion SUNAT para `.pfx`, credenciales SOL, endpoints beta/prod y modo disabled/sandbox/prod.
-- [ ] Documentar smoke tests de Drive/Resend/SUNAT sin depender de secretos reales.
+- [x] Documentar smoke tests de Drive/Resend/SUNAT sin depender de secretos reales.
 
 ## Fase 4 - Catalogo real con Drive
 
-- [ ] Categorias reales de carta.
-- [ ] Productos base, variantes y precios historicos.
+- [x] Fase 4A: base de categorias reales con metadata, slug, orden y visibilidad.
+- [x] Fase 4A: productos base, variantes iniciales y precios historicos iniciales.
 - [ ] Modificadores y grupos de modificadores.
 - [ ] Combos y componentes.
-- [ ] Imagenes de producto en Google Drive mediante `StorageService`.
-- [ ] Paginacion/filtros para evitar `findAll` operativo sin limite.
+- [x] Fase 4A: imagenes de producto enlazadas a `storage_files` y subida mediante `StorageService`.
+- [x] Fase 4A: endpoints nuevos paginados para evitar `findAll` operativo sin limite.
 
 ## Fase 5 - Flujo operativo de pedidos, mesas y caja
 

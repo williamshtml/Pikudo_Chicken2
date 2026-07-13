@@ -29,6 +29,10 @@ public class StorageProperties {
             require(googleDrive.oauthClientId, "DRIVE_OAUTH_CLIENT_ID");
             require(googleDrive.oauthClientSecret, "DRIVE_OAUTH_CLIENT_SECRET");
             require(googleDrive.oauthRefreshToken, "DRIVE_OAUTH_REFRESH_TOKEN");
+            require(googleDrive.folders.products, "DRIVE_FOLDERS_PRODUCTS");
+            require(googleDrive.folders.avatarUsers, "DRIVE_FOLDERS_AVATAR_USERS");
+            require(googleDrive.folders.deliveryEvidence, "DRIVE_FOLDERS_DELIVERY_EVIDENCE");
+            require(googleDrive.folders.sunatRoot, "DRIVE_FOLDERS_SUNAT_ROOT");
         }
     }
 
