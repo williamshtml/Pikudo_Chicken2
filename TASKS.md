@@ -74,23 +74,30 @@
 
 ## Fase 5 - Flujo operativo de pedidos, mesas y caja
 
-- [ ] Separar estado operativo de pedido y estado de pago.
-- [ ] Crear historial de estados `order_status_history`.
-- [ ] Definir transiciones: `UNREAD`, `READ`, `ACCEPTED`, `REJECTED`, `IN_PREPARATION`, `READY`, `ASSIGNED`, `ON_DELIVERY`, `NEAR_CUSTOMER`, `DELIVERED`, `CANCELLED`.
-- [ ] Sesiones de mesa.
-- [ ] Snapshots robustos de nombre/precio en detalle de pedido.
-- [ ] Pagos y caja alineados al modelo objetivo.
-- [ ] Indices por estado, fecha, mesa, repartidor y tracking code.
+- [x] Fase 5A/5B: separar estado operativo de pedido y estado de pago.
+- [x] Fase 5A/5B: crear historial de estados `order_status_history`.
+- [x] Fase 5A/5B: definir transiciones `UNREAD`, `READ`, `ACCEPTED`, `REJECTED`, `IN_PREPARATION`, `READY`, `ASSIGNED`, `ON_DELIVERY`, `NEAR_CUSTOMER`, `DELIVERED`, `CANCELLED`.
+- [x] Fase 5A/5B: sesiones de mesa con apertura/reuso/cierre controlado.
+- [x] Fase 5A/5B: snapshots robustos de nombre/precio en detalle de pedido.
+- [x] Fase 5A/5B: pagos y caja alineados a `estado_pago=PAID` manteniendo `estado=PAID` legacy temporal.
+- [x] Fase 5A/5B: indices por estado, fecha, mesa, tracking code y sesion de mesa.
+- [x] Fase 5A/5B: endpoints versionados `/api/v1/orders/**` y `/api/v1/tables/**`.
+- [x] Fase 5C: pagos parciales operativos en `order_payments`.
+- [x] Fase 5C: descuentos manuales snapshot en `order_discounts`.
+- [x] Fase 5C: resumen/cierre de caja basado en pagos confirmados sin duplicar comprobantes.
+- [x] Fase 5C: bloqueo de cierre de caja con pedidos parcialmente pagados.
+- [ ] Fase 8 futura: motor completo de promociones, cupones y eventos.
 
 ## Fase 6 - Comprobantes SUNAT
 
-- [ ] Modelo de factura, boleta simple, boleta con documento, nota de credito y nota de debito.
-- [ ] Project OpenUBL XBuilder para XML UBL firmado.
-- [ ] Project OpenUBL XSender para envio SUNAT/OSE.
-- [ ] Estado SUNAT con reintentos: `NO_ENVIADO`, `PENDIENTE`, `ACEPTADO`, `ACEPTADO_CON_OBSERVACION`, `RECHAZADO`.
-- [ ] Guardar XML, CDR y PDF opcional en Drive.
-- [ ] Estructura Drive: `FACTURAS`, `BOLETAS`, `NOTAS_DE_CREDITO`, `NOTAS_DE_DEBITO`, por fecha y cliente.
-- [ ] Boleta simple en carpeta `PUBLICO_GENERAL` o `SIN_DOCUMENTO`.
+- [x] Fase 6A: modelo base de factura, boleta simple, boleta con documento, nota de credito y nota de debito.
+- [x] Fase 6A: correlativos seguros con `document_sequences`.
+- [x] Fase 6A: cola `sunat_submission_jobs` con estados de reintento.
+- [x] Fase 6A: metadata para XML, CDR y PDF opcional enlazada a `storage_files`.
+- [x] Fase 6A: estructura logica Drive `FACTURAS`, `BOLETAS`, `NOTAS_DE_CREDITO`, `NOTAS_DE_DEBITO`.
+- [x] Fase 6A: boleta simple con `PUBLICO_GENERAL` / `SIN_DOCUMENTO`.
+- [ ] Fase 6B: Project OpenUBL XBuilder para XML UBL firmado.
+- [ ] Fase 6B: Project OpenUBL XSender para envio SUNAT/OSE.
 
 ## Fase 7 - Delivery, GPS y tracking real
 
