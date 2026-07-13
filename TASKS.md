@@ -6,7 +6,8 @@
 - Fase 1 - Infraestructura local: completada.
 - Fase 2 - Seguridad base: completada.
 - Fase 3 - Integraciones base y storage: completada.
-- Fase 4 - Catalogo real con Drive: activa.
+- Fase 4 - Catalogo real con Drive: completada.
+- Fase 5 - Flujo operativo de pedidos, mesas y caja: activa.
 
 `docs/context/07_CODEX_TASKS.md` queda como historico. Este archivo es el tablero vivo para ordenar las siguientes implementaciones.
 
@@ -66,8 +67,8 @@
 
 - [x] Fase 4A: base de categorias reales con metadata, slug, orden y visibilidad.
 - [x] Fase 4A: productos base, variantes iniciales y precios historicos iniciales.
-- [ ] Modificadores y grupos de modificadores.
-- [ ] Combos y componentes.
+- [x] Fase 4B: modificadores y grupos de modificadores.
+- [x] Fase 4C: combos y componentes.
 - [x] Fase 4A: imagenes de producto enlazadas a `storage_files` y subida mediante `StorageService`.
 - [x] Fase 4A: endpoints nuevos paginados para evitar `findAll` operativo sin limite.
 
