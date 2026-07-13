@@ -1,17 +1,15 @@
-# 02 — Target Backend Architecture
+# 02 - Target Backend Architecture
 
-## Decisión central
+## Decision central
 
-El backend debe construirse como **modular monolith multicapas**.
+El backend debe construirse como modular monolith multicapas. No iniciar con microservicios porque el sistema sera self-hosted para un restaurante especifico. Los microservicios aumentarian despliegue, monitoreo, logs, seguridad, recuperacion ante fallos y soporte tecnico sin una ganancia real para esta etapa.
 
-No iniciar con microservicios porque el sistema será self-hosted para un restaurante específico. Los microservicios aumentarían despliegue, monitoreo, logs, seguridad, recuperación ante fallos y soporte técnico sin una ganancia real para esta etapa.
-
-## Vista lógica
+## Vista logica
 
 ```text
 [React + Vite + Tauri Desktop]
               |
-[Next.js Landing Pública]
+[Next.js Landing Publica]
               |
 [Flutter Delivery App]
               |
@@ -19,77 +17,75 @@ No iniciar con microservicios porque el sistema será self-hosted para un restau
               |
 [Spring Boot API modular multicapas]
               |
-  --------------------------------------
-  |            |          |             |
-PostgreSQL   Redis      Kafka     Local Storage
-  |                                   |
-Backups diarios                  Evidencias / imágenes
-  |
-Export futuro a BigQuery
+  -------------------------------------------------------
+  |            |          |             |               |
+PostgreSQL   Redis      Kafka     StorageService   Integrations
+  |            |          |             |               |
+Backups    Tracking   Eventos     Local/Drive     Resend/SUNAT/Maps
 ```
+
+PostgreSQL sigue siendo la fuente de verdad. Redis se usa para estado caliente y TTL. Kafka se reserva para hechos de dominio importantes. Google Drive se usa como storage externo de archivos operativos, con local storage como fallback.
 
 ## Capas
 
 ### API Layer
 
-Responsable de exponer endpoints REST y WebSocket.
-
-Debe contener:
+Responsable de exponer REST y WebSocket:
 
 - Controllers.
 - Request DTOs.
 - Response DTOs.
-- Validación de entrada.
+- Validacion de entrada.
 - OpenAPI annotations.
 
 No debe contener reglas de negocio complejas.
 
 ### Application Layer
 
-Responsable de casos de uso.
-
-Ejemplos:
+Responsable de casos de uso:
 
 - Crear pedido.
-- Confirmar pedido.
-- Cambiar estado.
+- Cambiar estado operativo.
 - Registrar pago.
 - Asignar delivery.
-- Registrar ubicación.
+- Registrar ubicacion.
+- Subir archivo.
+- Enviar email.
+- Emitir comprobante.
 - Ejecutar backup.
 
 ### Domain Layer
 
-Responsable de reglas de negocio.
+Responsable de reglas de negocio:
 
-Ejemplos:
-
-- Un pedido entregado no vuelve a preparación.
-- Una promoción vencida no aplica.
+- Un pedido entregado no vuelve a preparacion.
+- Un pedido rechazado no puede cobrarse.
+- Una promocion vencida no aplica.
 - Un mozo no cobra pedidos.
 - Un delivery solo reporta GPS con entrega activa.
-- Un producto sin insumo crítico puede marcarse no disponible.
+- El cliente publico no ve coordenadas exactas del repartidor.
+- Un comprobante SUNAT rechazado debe quedar trazable y reintentable segun regla definida.
 
 ### Infrastructure Layer
 
-Responsable de adaptadores técnicos.
-
-Incluye:
+Responsable de adaptadores tecnicos:
 
 - Persistencia PostgreSQL.
 - Redis.
 - Kafka.
+- Google Drive.
+- Resend API.
 - Google Maps / Routes.
 - Firebase Cloud Messaging.
 - Culqi.
-- SUNAT.
-- Storage local.
+- SUNAT con Project OpenUBL XBuilder/XSender.
+- Storage local fallback.
 - Backup runner.
 
-## Convención de paquetes objetivo
+## Convencion de paquetes objetivo
 
 ```text
-com.studiostkoh.pikudo
+com.pikudo
   config
   shared
     api
@@ -98,11 +94,8 @@ com.studiostkoh.pikudo
     infrastructure
     security
     events
+    storage
   identity
-    api
-    application
-    domain
-    infrastructure
   restaurant
   catalog
   pricing
@@ -116,25 +109,86 @@ com.studiostkoh.pikudo
   reports
   backups
   audit
+  integrations
 ```
 
-## Compatibilidad con el repo actual
+No renombrar todo de golpe. Crear subpaquetes modulares dentro de `com.pikudo` y migrar incrementalmente.
 
-El repo actual usa `com.pikudo`. No renombrar todo de golpe. Se recomienda:
+## Admin y seguridad
 
-1. Mantener `com.pikudo` mientras se ordena infraestructura.
-2. Crear subpaquetes modulares dentro de `com.pikudo`.
-3. Evitar cambios masivos de paquete que dificulten revisión.
-4. Evaluar cambio a `com.studiostkoh.pikudo` solo cuando el backend esté estable.
+- No existe admin unico.
+- Varios usuarios pueden compartir el rol `ADMINISTRADOR`.
+- El seed de admin es solo bootstrap inicial y debe poder deshabilitarse por entorno.
+- Cambios de usuarios, roles, permisos y credenciales deben auditarse.
+
+## Storage
+
+`StorageService` debe ser el unico punto de entrada para guardar binarios nuevos.
+
+Backends:
+
+- `local`: desarrollo, fallback y pruebas.
+- `google-drive`: backend principal para produccion self-hosted.
+
+Usos previstos:
+
+- Imagenes de producto.
+- Avatares de usuarios/repartidores.
+- Evidencias de entrega.
+- XML, CDR y PDF de comprobantes SUNAT.
+- Backups exportados si se define una politica de copia externa.
+
+No guardar binarios grandes dentro de PostgreSQL salvo necesidad concreta. La base debe guardar metadata, ids externos, checksum y trazabilidad.
+
+## Email
+
+Resend API sera el proveedor principal. SMTP queda como compatibilidad secundaria/no prioritaria.
+
+Casos iniciales:
+
+- Alertas operativas.
+- Recuperacion o invitacion de usuarios si se implementa.
+- Notificaciones de comprobantes si se habilita envio al cliente.
+- Alertas de backup o fallos de integracion.
+
+## SUNAT
+
+La integracion SUNAT se hara con Project OpenUBL:
+
+- XBuilder para crear y firmar XML UBL.
+- XSender para enviar comprobantes a SUNAT/OSE.
+- `.pfx` y password por variables de entorno seguras.
+- Modo `disabled`, `sandbox` y `prod`.
+
+Documentos objetivo:
+
+- Factura.
+- Boleta simple sin documento.
+- Boleta con documento.
+- Nota de credito.
+- Nota de debito.
+
+## Pedidos y tracking
+
+Separar estado operativo de pedido y estado de pago.
+
+Estado operativo objetivo:
+
+```text
+UNREAD -> READ -> ACCEPTED -> IN_PREPARATION -> READY -> ASSIGNED -> ON_DELIVERY -> NEAR_CUSTOMER -> DELIVERED
+                       |              |              |             |             |
+                    REJECTED       CANCELLED      CANCELLED     CANCELLED    CANCELLED
+```
+
+El cliente publico ve estado, avance, ETA/distancia aproximada y cercania. El panel administrativo y la app Flutter del repartidor usan ubicacion exacta durante entrega activa.
 
 ## Uso de WebFlux
 
-El proyecto actual usa Spring MVC. El objetivo menciona WebFlux. Para evitar roturas:
+El proyecto actual usa Spring MVC. Para evitar roturas:
 
-1. No mezclar WebMVC y WebFlux sin decisión clara.
-2. Si se migra a WebFlux, planificarlo como fase técnica dedicada.
-3. Para MVP self-hosted se puede mantener MVC inicialmente y usar WebSocket para tiempo real.
-4. WebFlux se justifica más en tracking, notificaciones, streaming y endpoints I/O intensivos.
+- No mezclar WebMVC y WebFlux sin fase tecnica dedicada.
+- Mantener MVC inicialmente y usar WebSocket para tiempo real.
+- Evaluar WebFlux despues de estabilizar pedidos, delivery y storage.
 
 ## Kafka
 
@@ -145,6 +199,8 @@ Kafka debe usarse para eventos de dominio importantes:
 - `PaymentRegistered`
 - `DeliveryAssigned`
 - `DriverLocationUpdated`
+- `ReceiptIssued`
+- `ReceiptSunatStatusChanged`
 - `StockMovementCreated`
 - `BackupCompleted`
 - `PromotionApplied`
@@ -155,20 +211,10 @@ No usar Kafka para todo. PostgreSQL sigue siendo la fuente de verdad.
 
 Redis debe usarse para:
 
-- Caché de carta.
+- Cache de carta.
 - Estado actual de mesas.
-- Última ubicación de delivery.
+- Ultima ubicacion de delivery.
 - Rate limiting.
-- Tracking público.
+- Tracking publico.
 - Locks operativos.
-
-## Storage local
-
-Guardar localmente:
-
-- Imágenes de producto.
-- Evidencias de entrega.
-- Backups.
-- Logs rotativos.
-
-No guardar binarios grandes dentro de PostgreSQL salvo necesidad concreta.
+- TTL de estados temporales.

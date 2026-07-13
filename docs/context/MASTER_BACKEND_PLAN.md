@@ -22,6 +22,19 @@ La solucion se disenara como un sistema **on-premise / self-hosted**, ejecutable
 
 La arquitectura recomendada para este caso es una **arquitectura multicapas con modular monolith**, no microservicios en la fase inicial. El sistema debe estar claramente dividido por modulos internos, pero desplegado como una API principal. Esta decision reduce complejidad operativa, evita costos innecesarios de infraestructura, facilita el mantenimiento para un local que correra su propio sistema y deja el camino abierto para extraer modulos independientes cuando el negocio lo justifique.
 
+## Actualizacion operativa post-Fase 2
+
+Fase 2 de seguridad base queda cerrada. El roadmap operativo pasa a Fase 3: integraciones base y storage. Antes de avanzar con catalogo real, pedidos avanzados o SUNAT completo, el backend debe preparar una abstraccion comun de archivos, Google Drive como storage principal, Resend como proveedor principal de email y configuracion SUNAT segura basada en `.env`.
+
+Decisiones nuevas:
+
+- El sistema soporta multiples administradores. El rol `ADMINISTRADOR` no es singleton; el seed inicial solo crea un usuario bootstrap si esta habilitado.
+- Google Drive sera el storage principal para imagenes, evidencias y documentos tributarios. Storage local queda como fallback.
+- Resend API sera el proveedor principal de email. SMTP queda como compatibilidad secundaria/no prioritaria.
+- SUNAT se implementara con Project OpenUBL XBuilder/XSender, certificado `.pfx` y credenciales SOL por variables de entorno seguras.
+- El cliente publico de tracking no vera coordenadas exactas ni mapa exacto. El panel administrativo y la app Flutter del repartidor si usaran ubicacion precisa durante entregas activas.
+- El flujo operativo de pedidos debe diferenciar estado de preparacion/entrega, estado de pago y estado SUNAT.
+
 # Contexto del proyecto
 
 ## Cambio de enfoque
@@ -35,7 +48,7 @@ El sistema para Pikudo Chicken tendra los siguientes productos principales:
 3. **Landing page publica** construida con Next.js, React y TypeScript, orientada a carta, marca, contacto y captacion de clientes.
 4. **Modulo movil de delivery** construido con Flutter en una fase posterior.
 5. **Base de datos PostgreSQL** normalizada y preparada para crecimiento vertical.
-6. **Servicios de infraestructura local**: Redis, Kafka, almacenamiento de archivos, backups diarios y observabilidad basica.
+6. **Servicios de infraestructura local**: Redis, Kafka, Google Drive como storage externo, fallback local de archivos, backups diarios y observabilidad basica.
 
 ## Informacion operacional considerada
 
@@ -91,11 +104,11 @@ Construir una plataforma backend robusta, mantenible y escalable verticalmente p
 - Reportes operativos.
 - Auditoria de operaciones criticas.
 - Backups diarios de PostgreSQL.
+- Facturacion electronica SUNAT por fase, usando Project OpenUBL, certificado `.pfx` y almacenamiento de XML/CDR en Drive.
 
 ## Fuera de alcance inicial
 
 - Multi-tenant SaaS para varios restaurantes.
-- Facturacion electronica SUNAT completamente automatizada, salvo que Pikudo lo solicite como fase contractual.
 - BI avanzado en BigQuery desde el primer sprint.
 - Microservicios independientes en produccion inicial.
 - Optimizacion avanzada de rutas multi-delivery en tiempo real desde el primer release.
@@ -127,14 +140,14 @@ La migracion parcial a microservicios solo deberia considerarse si ocurre una o 
                |
 [Landing Web - Next.js] ----> [Nginx / Reverse Proxy]
                |                         |
-[Flutter Delivery App] ----------------> [Backend API - Spring Boot WebFlux]
+[Flutter Delivery App] ----------------> [Backend API - Spring Boot MVC/WebSocket]
                                          |
-                   -------------------------------------------------
-                   |                 |              |              |
-              [PostgreSQL]        [Redis]        [Kafka]     [Storage local]
-                   |                                |
-              [Backups diarios]              [Eventos asincronos]
-                   |
+                   -----------------------------------------------------------
+                   |                 |              |                       |
+              [PostgreSQL]        [Redis]        [Kafka]          [StorageService]
+                   |                                |                       |
+              [Backups diarios]              [Eventos asincronos]    [Google Drive]
+                   |                                                [Fallback local]
           [Export futuro a BigQuery]
 ```
 
@@ -251,9 +264,10 @@ Componentes:
 
 | Servicio | Uso |
 |---|---|
-| Docker Compose | Levantar PostgreSQL, Redis, Kafka, backend y servicios auxiliares |
+| Docker Compose | Levantar API, Redis, Kafka y conectarse al PostgreSQL externo |
 | Nginx | Reverse proxy local o publico |
-| Volumen local cifrado | Backups, imagenes y evidencias |
+| Google Drive | Storage principal de imagenes, evidencias y documentos SUNAT |
+| Volumen local cifrado | Fallback local, backups y contingencia |
 | Logs rotativos | Diagnostico operativo |
 | Health checks | Validacion de servicios activos |
 
@@ -2235,173 +2249,86 @@ pikudo-deploy/
   .env
   nginx/
     nginx.conf
-  postgres/
-    init/
   backups/
   storage/
-    product-images/
-    delivery-evidence/
+    local-fallback/
+      product-images/
+      delivery-evidence/
+      sunat-documents/
   logs/
+  secrets/
 ```
 
 ## Variables de entorno
 
 ```text
-POSTGRES_DB=pikudo_db
-POSTGRES_USER=pikudo_app
-POSTGRES_PASSWORD=********
+DB_HOST=global_postgres_db
+DB_PORT=5432
+DB_NAME=pikudo_db
+DB_USERNAME=pikudo_app
+DB_PASSWORD=********
 JWT_SECRET=********
 REDIS_HOST=redis
 KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-BACKUP_DIR=/backups
-GOOGLE_MAPS_API_KEY=********
-FIREBASE_CREDENTIALS_PATH=/secrets/firebase.json
+APP_STORAGE_PROVIDER=google-drive
+GOOGLE_DRIVE_ENABLED=true
+DRIVE_OAUTH_CLIENT_ID=********
+DRIVE_OAUTH_CLIENT_SECRET=********
+DRIVE_OAUTH_REFRESH_TOKEN=********
+RESEND_ENABLED=true
+RESEND_API_KEY=********
+SUNAT_ENABLED=false
+SUNAT_MODE=disabled
+SUNAT_PFX_BASE64=********
 ```
 
 # Plan por fases
 
-## Fase 0 - Preparacion tecnica
+La numeracion canonica del roadmap operativo se mantiene en `TASKS.md` y `docs/context/04_IMPLEMENTATION_ROADMAP.md`.
 
-Duracion estimada: 3 a 5 dias.
+## Fase 0 - Contexto y decisiones
 
-Entregables:
+Completada. Consolida `AGENTS.md`, documentos de contexto y decisiones tecnicas.
 
-- Repositorio backend.
-- Estructura multicapas.
-- Docker Compose inicial.
-- PostgreSQL, Redis y Kafka levantados.
-- Flyway configurado.
-- Health check del backend.
-- OpenAPI base.
+## Fase 1 - Infraestructura local
 
-## Fase 1 - Seguridad y catalogo
+Completada. Java 21, PostgreSQL externo `global_postgres_db`, Flyway, perfiles `.env`, Docker Compose, Redis, Kafka y Actuator.
 
-Duracion estimada: 1 a 2 semanas.
+## Fase 2 - Seguridad base
 
-Entregables:
+Completada. JWT configurable, refresh tokens, roles, permisos, auditoria minima y endpoints de sesion.
 
-- Login JWT.
-- Roles y permisos.
-- Usuarios internos.
-- Categorias.
-- Productos.
-- Variantes.
-- Precios.
-- Imagenes.
-- Seed inicial de categorias de la carta.
+## Fase 3 - Integraciones base y storage
 
-## Fase 2 - Pedidos, mesas y caja
+Activa. Preparar `StorageService`, provider local, provider Google Drive, Resend API, variables SUNAT y configuracion segura de `.pfx`.
 
-Duracion estimada: 2 a 3 semanas.
+## Fase 4 - Catalogo real con Drive
 
-Entregables:
+Categorias, productos, variantes, precios historicos, modificadores, combos e imagenes en Google Drive mediante `StorageService`.
 
-- Mesas.
-- Sesiones de mesa.
-- Pedidos salon.
-- Pedidos telefono/WhatsApp/manual.
-- Pedido recojo.
-- Estados de pedido.
-- Pagos.
-- Cierre basico de caja.
-- WebSocket para estados.
+## Fase 5 - Flujo operativo de pedidos, mesas y caja
 
-## Fase 3 - Promociones, descuentos y eventos
+Separar estado operativo, estado de pago y estado SUNAT. Implementar historial de estados, sesiones de mesa, snapshots robustos y caja/pagos.
 
-Duracion estimada: 1 a 2 semanas.
+## Fase 6 - Comprobantes SUNAT
 
-Entregables:
+Factura, boleta simple, boleta con documento, nota de credito, nota de debito, XML firmado con Project OpenUBL, CDR y almacenamiento en Drive.
 
-- Eventos comerciales.
-- Promociones.
-- Reglas de descuento.
-- Cupones.
-- Aplicacion de promociones en pedido.
-- Reporte de promociones aplicadas.
+## Fase 7 - Delivery, GPS y tracking real
 
-## Fase 4 - Inventario y recetas
+Entregas normalizadas, tracking solo con entrega activa, ultima ubicacion en Redis, historico PostgreSQL, vista publica aproximada y mapa exacto admin/Flutter.
 
-Duracion estimada: 2 semanas.
+## Fase 8 - Promociones, descuentos y eventos
 
-Entregables:
+Eventos comerciales, promociones, cupones, reglas de descuento y registro de descuentos aplicados.
 
-- Insumos.
-- Unidades de medida.
-- Almacenes.
-- Movimientos de stock.
-- Recetas por variante.
-- Descuento automatico por venta.
-- Alertas de stock bajo.
+## Fase 9 - Inventario y recetas
 
-## Fase 5 - Delivery y GPS basico
+Insumos, unidades, almacenes, recetas, movimientos de stock y alertas de stock bajo.
 
-Duracion estimada: 2 a 3 semanas.
+## Fase 10 - Backups, auditoria, reportes y hardening
 
-Entregables:
-
-- Motorizados.
-- Vehiculos.
-- Zonas de delivery.
-- Asignacion de pedido.
-- App Flutter envia ubicacion.
-- Redis guarda ultima ubicacion.
-- PostgreSQL guarda historico.
-- Panel desktop ve mapa.
-- Cliente ve estado del pedido.
-
-## Fase 6 - Landing publica
-
-Duracion estimada: 1 a 2 semanas.
-
-Entregables:
-
-- Landing Next.js.
-- Seccion de historia/marca.
-- Carta publica.
-- Productos destacados.
-- Botones de contacto.
-- Enlace a WhatsApp.
-- Preparacion para pedidos web futuros.
-
-## Fase 7 - Backups, auditoria y hardening
-
-Duracion estimada: 1 semana.
-
-Entregables:
-
-- Backup diario.
-- Retencion de backups.
-- Registro en `backup_jobs`.
-- Auditoria de acciones criticas.
-- Logs rotativos.
-- Prueba de restauracion.
-- Checklist de seguridad.
-
-## Fase 8 - Reportes y optimizacion
-
-Duracion estimada: 1 a 2 semanas.
-
-Entregables:
-
-- Reportes diarios.
-- Reportes mensuales.
-- Productos mas vendidos.
-- Rendimiento delivery.
-- Metodos de pago.
-- Indices finales.
-- Vistas/materialized views.
-
-## Fase 9 - Preparacion analitica futura
-
-Duracion estimada: variable.
-
-Entregables:
-
-- Tablas resumen.
-- Export batch.
-- Estructura para BigQuery.
-- Documentacion de eventos.
-- Data dictionary para BI.
+Backup diario restaurable, auditoria ampliada, reportes operativos, indices finales y ruta futura a BigQuery.
 
 # Criterios de aceptacion
 

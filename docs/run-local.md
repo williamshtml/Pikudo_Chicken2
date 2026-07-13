@@ -24,7 +24,75 @@ Copy-Item .env.dev.example .env.dev
 Copy-Item .env.prod.example .env.prod
 ```
 
-Editar los valores reales de `DB_PASSWORD`, `JWT_SECRET` y, si aplica, el seed del administrador.
+Editar los valores reales de:
+
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `ADMIN_*` si se habilita seed local
+- `DRIVE_OAUTH_*` cuando se active Google Drive
+- `RESEND_API_KEY` y `RESEND_FROM_EMAIL` cuando se active Resend
+- `SUNAT_*` cuando se active emision electronica
+
+No commitear archivos `.env.*` reales ni certificados `.pfx`.
+
+## Integraciones
+
+Por defecto, Drive, Resend y SUNAT quedan deshabilitados en las plantillas:
+
+```text
+GOOGLE_DRIVE_ENABLED=false
+RESEND_ENABLED=false
+SUNAT_ENABLED=false
+SUNAT_MODE=disabled
+```
+
+La Fase 3 implementara los providers funcionales. Mientras tanto, estas variables documentan el contrato de configuracion.
+
+### Google Drive
+
+Se usara OAuth refresh token:
+
+```text
+DRIVE_OAUTH_CLIENT_ID=
+DRIVE_OAUTH_CLIENT_SECRET=
+DRIVE_OAUTH_REFRESH_TOKEN=
+DRIVE_FOLDERS_PRODUCTS=
+DRIVE_FOLDERS_AVATAR_USERS=
+DRIVE_FOLDERS_DELIVERY_EVIDENCE=
+DRIVE_FOLDERS_SUNAT_ROOT=
+```
+
+`APP_STORAGE_PROVIDER=local` usa disco local como fallback. `APP_STORAGE_PROVIDER=google-drive` sera el provider principal cuando se implemente.
+
+### Resend
+
+Se usara Resend API:
+
+```text
+RESEND_ENABLED=false
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=Pikudo Chicken <no-reply@example.com>
+```
+
+Las variables `SMTP_*` quedan como compatibilidad secundaria/no prioritaria.
+
+### SUNAT
+
+Para la integracion futura con Project OpenUBL XBuilder/XSender:
+
+```text
+SUNAT_ENABLED=false
+SUNAT_MODE=disabled
+SUNAT_RUC=
+SUNAT_SOL_USERNAME=
+SUNAT_SOL_PASSWORD=
+SUNAT_PFX_BASE64=
+SUNAT_PFX_PASSWORD=
+SUNAT_ENDPOINT_BETA=
+SUNAT_ENDPOINT_PROD=
+```
+
+Usar `SUNAT_PFX_BASE64` o un secreto montado fuera del repo. No guardar el `.pfx` en Git.
 
 ## Perfil local
 
@@ -82,7 +150,7 @@ docker compose --env-file .env.prod up --build -d
 ```powershell
 .\mvnw.cmd -q test
 .\mvnw.cmd -q -DskipTests package
-docker compose --env-file .env.docker config
+docker compose --env-file .env.docker.example config --quiet
 ```
 
 Flyway ejecuta automaticamente las migraciones al arrancar la aplicacion. Hibernate queda en `validate`, por lo que no crea ni modifica tablas.
