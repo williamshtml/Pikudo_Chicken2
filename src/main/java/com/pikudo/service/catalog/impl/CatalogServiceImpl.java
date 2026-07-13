@@ -2,8 +2,16 @@ package com.pikudo.service.catalog.impl;
 
 import com.pikudo.dto.catalog.CatalogCategoryRequestDTO;
 import com.pikudo.dto.catalog.CatalogCategoryResponseDTO;
+import com.pikudo.dto.catalog.CatalogComboComponentRequestDTO;
+import com.pikudo.dto.catalog.CatalogComboComponentResponseDTO;
+import com.pikudo.dto.catalog.CatalogModifierGroupRequestDTO;
+import com.pikudo.dto.catalog.CatalogModifierGroupResponseDTO;
+import com.pikudo.dto.catalog.CatalogModifierRequestDTO;
+import com.pikudo.dto.catalog.CatalogModifierResponseDTO;
 import com.pikudo.dto.catalog.CatalogProductImageLinkRequestDTO;
 import com.pikudo.dto.catalog.CatalogProductImageResponseDTO;
+import com.pikudo.dto.catalog.CatalogProductModifierGroupRequestDTO;
+import com.pikudo.dto.catalog.CatalogProductModifierGroupResponseDTO;
 import com.pikudo.dto.catalog.CatalogProductRequestDTO;
 import com.pikudo.dto.catalog.CatalogProductResponseDTO;
 import com.pikudo.dto.catalog.CatalogProductVariantRequestDTO;
@@ -11,9 +19,13 @@ import com.pikudo.dto.catalog.CatalogProductVariantResponseDTO;
 import com.pikudo.entity.Categoria;
 import com.pikudo.entity.Producto;
 import com.pikudo.entity.ProductoTipo;
+import com.pikudo.entity.catalog.ComboComponent;
+import com.pikudo.entity.catalog.Modifier;
+import com.pikudo.entity.catalog.ModifierGroup;
 import com.pikudo.entity.catalog.ProductoImagen;
 import com.pikudo.entity.catalog.ProductoPrecioHistorial;
 import com.pikudo.entity.catalog.ProductoVariante;
+import com.pikudo.entity.catalog.ProductModifierGroup;
 import com.pikudo.entity.storage.StorageFile;
 import com.pikudo.exception.BusinessException;
 import com.pikudo.repository.CategoriaRepository;
@@ -21,6 +33,10 @@ import com.pikudo.repository.ProductoRepository;
 import com.pikudo.repository.catalog.ProductoImagenRepository;
 import com.pikudo.repository.catalog.ProductoPrecioHistorialRepository;
 import com.pikudo.repository.catalog.ProductoVarianteRepository;
+import com.pikudo.repository.catalog.ComboComponentRepository;
+import com.pikudo.repository.catalog.ModifierGroupRepository;
+import com.pikudo.repository.catalog.ModifierRepository;
+import com.pikudo.repository.catalog.ProductModifierGroupRepository;
 import com.pikudo.repository.storage.StorageFileRepository;
 import com.pikudo.service.catalog.CatalogService;
 import com.pikudo.service.storage.StoragePurpose;
@@ -38,6 +54,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +69,10 @@ public class CatalogServiceImpl implements CatalogService {
     private final ProductoVarianteRepository varianteRepository;
     private final ProductoPrecioHistorialRepository precioHistorialRepository;
     private final ProductoImagenRepository imagenRepository;
+    private final ModifierGroupRepository modifierGroupRepository;
+    private final ModifierRepository modifierRepository;
+    private final ProductModifierGroupRepository productModifierGroupRepository;
+    private final ComboComponentRepository comboComponentRepository;
     private final StorageFileRepository storageFileRepository;
     private final StorageService storageService;
 
@@ -191,9 +212,147 @@ public class CatalogServiceImpl implements CatalogService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CatalogModifierGroupResponseDTO> listModifierGroups(String search, Boolean active, Boolean publicVisible, Pageable pageable) {
+        return modifierGroupRepository.findAll(modifierGroupSpecification(search, active, publicVisible), pageable)
+                .map(this::toModifierGroupResponse);
+    }
+
+    @Override
+    @Transactional
+    public CatalogModifierGroupResponseDTO createModifierGroup(CatalogModifierGroupRequestDTO request) {
+        validateSelection(request.minSelection(), request.maxSelection());
+        String slug = resolveModifierGroupSlug(request.slug(), request.name());
+        ModifierGroup group = ModifierGroup.builder()
+                .nombre(request.name().trim())
+                .slug(slug)
+                .descripcion(blankToNull(request.description()))
+                .minSelection(defaultInt(request.minSelection(), 0))
+                .maxSelection(request.maxSelection())
+                .requerido(defaultBool(request.required(), false))
+                .activo(defaultBool(request.active(), true))
+                .visiblePublico(defaultBool(request.publicVisible(), true))
+                .orden(defaultInt(request.sortOrder(), 0))
+                .metadataJson("{}")
+                .build();
+        return toModifierGroupResponse(modifierGroupRepository.save(group));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CatalogModifierGroupResponseDTO getModifierGroup(Long id) {
+        return toModifierGroupResponse(findModifierGroup(id));
+    }
+
+    @Override
+    @Transactional
+    public CatalogModifierGroupResponseDTO addModifier(Long groupId, CatalogModifierRequestDTO request) {
+        ModifierGroup group = findModifierGroup(groupId);
+        String slug = resolveModifierSlug(groupId, request.slug(), request.name());
+        Modifier modifier = Modifier.builder()
+                .group(group)
+                .nombre(request.name().trim())
+                .slug(slug)
+                .precioExtra(request.extraPrice() != null ? request.extraPrice() : BigDecimal.ZERO)
+                .activo(defaultBool(request.active(), true))
+                .visiblePublico(defaultBool(request.publicVisible(), true))
+                .orden(defaultInt(request.sortOrder(), 0))
+                .metadataJson("{}")
+                .build();
+        modifierRepository.save(modifier);
+        return toModifierGroupResponse(group);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CatalogProductModifierGroupResponseDTO> listProductModifierGroups(Long productId) {
+        findProduct(productId);
+        return productModifierGroupRepository.findByProductoIdOrderByOrdenAscIdAsc(productId).stream()
+                .map(this::toProductModifierGroupResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CatalogProductModifierGroupResponseDTO assignModifierGroup(Long productId, CatalogProductModifierGroupRequestDTO request) {
+        Producto product = findProduct(productId);
+        ModifierGroup group = findModifierGroup(request.modifierGroupId());
+        validateSelection(request.minSelectionOverride(), request.maxSelectionOverride());
+        if (productModifierGroupRepository.existsByProductoIdAndGroupId(productId, request.modifierGroupId())) {
+            throw new BusinessException("El grupo de modificadores ya esta asociado al producto");
+        }
+        ProductModifierGroup assignment = ProductModifierGroup.builder()
+                .producto(product)
+                .group(group)
+                .requeridoOverride(request.requiredOverride())
+                .minSelectionOverride(request.minSelectionOverride())
+                .maxSelectionOverride(request.maxSelectionOverride())
+                .orden(defaultInt(request.sortOrder(), 0))
+                .metadataJson("{}")
+                .build();
+        return toProductModifierGroupResponse(productModifierGroupRepository.save(assignment));
+    }
+
+    @Override
+    @Transactional
+    public void removeModifierGroup(Long productId, Long groupId) {
+        ProductModifierGroup assignment = productModifierGroupRepository.findByProductoIdAndGroupId(productId, groupId)
+                .orElseThrow(() -> new BusinessException("El grupo no esta asociado al producto indicado"));
+        productModifierGroupRepository.delete(assignment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CatalogComboComponentResponseDTO> listComboComponents(Long productId) {
+        Producto product = findProduct(productId);
+        validateComboProduct(product);
+        return comboComponentRepository.findByComboProductIdOrderByOrdenAscIdAsc(productId).stream()
+                .map(this::toComboComponentResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CatalogComboComponentResponseDTO addComboComponent(Long productId, CatalogComboComponentRequestDTO request) {
+        Producto comboProduct = findProduct(productId);
+        validateComboProduct(comboProduct);
+        ProductoVariante componentVariant = varianteRepository.findById(request.componentVariantId())
+                .orElseThrow(() -> new BusinessException("Variante componente no encontrada: " + request.componentVariantId()));
+        if (componentVariant.getProducto().getId().equals(productId)) {
+            throw new BusinessException("Un combo no puede contener una variante de si mismo");
+        }
+        if (comboComponentRepository.existsByComboProductIdAndComponentVariantId(productId, request.componentVariantId())) {
+            throw new BusinessException("La variante ya esta asociada como componente del combo");
+        }
+        ComboComponent component = ComboComponent.builder()
+                .comboProduct(comboProduct)
+                .componentVariant(componentVariant)
+                .cantidad(request.quantity() != null ? request.quantity() : BigDecimal.ONE)
+                .requerido(defaultBool(request.required(), true))
+                .reemplazable(defaultBool(request.replaceable(), false))
+                .orden(defaultInt(request.sortOrder(), 0))
+                .metadataJson("{}")
+                .build();
+        return toComboComponentResponse(comboComponentRepository.save(component));
+    }
+
+    @Override
+    @Transactional
+    public void removeComboComponent(Long productId, Long componentId) {
+        ComboComponent component = comboComponentRepository.findByIdAndComboProductId(componentId, productId)
+                .orElseThrow(() -> new BusinessException("Componente de combo no encontrado para el producto indicado"));
+        comboComponentRepository.delete(component);
+    }
+
     private Producto findProduct(Long id) {
         return productoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Producto no encontrado: " + id));
+    }
+
+    private ModifierGroup findModifierGroup(Long id) {
+        return modifierGroupRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Grupo de modificadores no encontrado: " + id));
     }
 
     private ProductoVariante findVariantForProduct(Long productId, Long variantId) {
@@ -287,6 +446,26 @@ public class CatalogServiceImpl implements CatalogService {
         };
     }
 
+    private Specification<ModifierGroup> modifierGroupSpecification(String search, Boolean active, Boolean publicVisible) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (StringUtils.hasText(search)) {
+                String like = "%" + search.toLowerCase(Locale.ROOT).trim() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("nombre")), like),
+                        cb.like(cb.lower(root.get("slug")), like)
+                ));
+            }
+            if (active != null) {
+                predicates.add(cb.equal(root.get("activo"), active));
+            }
+            if (publicVisible != null) {
+                predicates.add(cb.equal(root.get("visiblePublico"), publicVisible));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
     private CatalogCategoryResponseDTO toCategoryResponse(Categoria category) {
         return new CatalogCategoryResponseDTO(
                 category.getId(),
@@ -323,7 +502,73 @@ public class CatalogServiceImpl implements CatalogService {
                 product.getOrden(),
                 toCategoryResponse(product.getCategoria()),
                 variants,
-                mainImage
+                mainImage,
+                productModifierGroupRepository.findByProductoIdOrderByOrdenAscIdAsc(product.getId()).stream()
+                        .map(this::toProductModifierGroupResponse)
+                        .toList(),
+                comboComponentRepository.findByComboProductIdOrderByOrdenAscIdAsc(product.getId()).stream()
+                        .map(this::toComboComponentResponse)
+                        .toList()
+        );
+    }
+
+    private CatalogModifierGroupResponseDTO toModifierGroupResponse(ModifierGroup group) {
+        return new CatalogModifierGroupResponseDTO(
+                group.getId(),
+                group.getNombre(),
+                group.getSlug(),
+                group.getDescripcion(),
+                group.getMinSelection(),
+                group.getMaxSelection(),
+                group.getRequerido(),
+                group.getActivo(),
+                group.getVisiblePublico(),
+                group.getOrden(),
+                modifierRepository.findByGroupIdOrderByOrdenAscIdAsc(group.getId()).stream()
+                        .map(this::toModifierResponse)
+                        .toList()
+        );
+    }
+
+    private CatalogModifierResponseDTO toModifierResponse(Modifier modifier) {
+        return new CatalogModifierResponseDTO(
+                modifier.getId(),
+                modifier.getNombre(),
+                modifier.getSlug(),
+                modifier.getPrecioExtra(),
+                modifier.getActivo(),
+                modifier.getVisiblePublico(),
+                modifier.getOrden()
+        );
+    }
+
+    private CatalogProductModifierGroupResponseDTO toProductModifierGroupResponse(ProductModifierGroup assignment) {
+        ModifierGroup group = assignment.getGroup();
+        return new CatalogProductModifierGroupResponseDTO(
+                assignment.getId(),
+                assignment.getProducto().getId(),
+                toModifierGroupResponse(group),
+                assignment.getRequeridoOverride() != null ? assignment.getRequeridoOverride() : group.getRequerido(),
+                assignment.getMinSelectionOverride() != null ? assignment.getMinSelectionOverride() : group.getMinSelection(),
+                assignment.getMaxSelectionOverride() != null ? assignment.getMaxSelectionOverride() : group.getMaxSelection(),
+                assignment.getOrden()
+        );
+    }
+
+    private CatalogComboComponentResponseDTO toComboComponentResponse(ComboComponent component) {
+        ProductoVariante variant = component.getComponentVariant();
+        Producto componentProduct = variant.getProducto();
+        return new CatalogComboComponentResponseDTO(
+                component.getId(),
+                component.getComboProduct().getId(),
+                variant.getId(),
+                componentProduct.getId(),
+                componentProduct.getNombre(),
+                variant.getNombre(),
+                component.getCantidad(),
+                component.getRequerido(),
+                component.getReemplazable(),
+                component.getOrden()
         );
     }
 
@@ -370,6 +615,22 @@ public class CatalogServiceImpl implements CatalogService {
         return uniqueSlug(slug, productoRepository::existsBySlug);
     }
 
+    private String resolveModifierGroupSlug(String requestedSlug, String name) {
+        String slug = slugify(StringUtils.hasText(requestedSlug) ? requestedSlug : name);
+        if (StringUtils.hasText(requestedSlug) && modifierGroupRepository.existsBySlug(slug)) {
+            throw new BusinessException("Ya existe un grupo de modificadores con slug: " + slug);
+        }
+        return uniqueSlug(slug, modifierGroupRepository::existsBySlug);
+    }
+
+    private String resolveModifierSlug(Long groupId, String requestedSlug, String name) {
+        String slug = slugify(StringUtils.hasText(requestedSlug) ? requestedSlug : name);
+        if (modifierRepository.existsByGroupIdAndSlug(groupId, slug)) {
+            throw new BusinessException("Ya existe un modificador con slug en este grupo: " + slug);
+        }
+        return slug;
+    }
+
     private String uniqueSlug(String baseSlug, SlugExists slugExists) {
         String candidate = baseSlug;
         int suffix = 2;
@@ -397,6 +658,18 @@ public class CatalogServiceImpl implements CatalogService {
 
     private Integer defaultInt(Integer value, int defaultValue) {
         return value != null ? value : defaultValue;
+    }
+
+    private void validateSelection(Integer minSelection, Integer maxSelection) {
+        if (minSelection != null && maxSelection != null && minSelection > maxSelection) {
+            throw new BusinessException("minSelection no puede ser mayor que maxSelection");
+        }
+    }
+
+    private void validateComboProduct(Producto product) {
+        if (product.getTipoProducto() != ProductoTipo.COMBO && product.getTipoProducto() != ProductoTipo.PROMOCION) {
+            throw new BusinessException("Solo productos COMBO o PROMOCION aceptan componentes");
+        }
     }
 
     private interface SlugExists {

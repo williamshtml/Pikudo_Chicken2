@@ -19,6 +19,8 @@ public record CatalogProductResponseDTO(
         Integer sortOrder,
         CatalogCategoryResponseDTO category,
         List<CatalogProductVariantResponseDTO> variants,
-        CatalogProductImageResponseDTO mainImage
+        CatalogProductImageResponseDTO mainImage,
+        List<CatalogProductModifierGroupResponseDTO> modifierGroups,
+        List<CatalogComboComponentResponseDTO> comboComponents
 ) {
 }
