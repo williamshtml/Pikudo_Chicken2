@@ -9,7 +9,7 @@
 		<version>3.5.14</version>
 		<relativePath/>
 	</parent>
-	<groupId>com.restaurant</groupId>
+	<groupId>com.pikudo.restaurant</groupId>
 	<artifactId>Pikudo_Chicken2</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Pikudo_Chicken2</name>

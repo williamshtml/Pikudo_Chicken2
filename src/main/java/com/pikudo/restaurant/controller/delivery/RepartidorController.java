@@ -1,0 +1,47 @@
+package com.pikudo.restaurant.controller.delivery;
+
+import com.pikudo.restaurant.dto.tracking.RepartidorEstadoDTO;
+import com.pikudo.restaurant.entity.Rol.TipoRol;
+import com.pikudo.restaurant.entity.Usuario;
+import com.pikudo.restaurant.repository.UsuarioRepository;
+import com.pikudo.restaurant.service.impl.PresenciaRepartidorServiceImpl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // <-- Importación agregada
+import org.springframework.web.bind.annotation.CrossOrigin; // <-- Importación agregada
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/repartidores")
+@RequiredArgsConstructor
+
+public class RepartidorController {
+
+    private final UsuarioRepository usuarioRepository;
+    private final PresenciaRepartidorServiceImpl presenciaService;
+
+    /**
+     * Carga inicial del panel de caja: todos los usuarios con rol MOTORIZADO,
+     * con su estado de conexion actual.
+     */
+    // 💵 El Cajero y 👑 el Admin entran aquí para ver a los motorizados disponibles
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'CAJERO')")
+    @GetMapping("/estado")
+    public ResponseEntity<List<RepartidorEstadoDTO>> listarConEstado() {
+        List<Usuario> repartidores = usuarioRepository.findByRol_Nombre(TipoRol.MOTORIZADO);
+
+        List<RepartidorEstadoDTO> resultado = repartidores.stream()
+                .map(u -> new RepartidorEstadoDTO(
+                        u.getId(),
+                        u.getUsername(),
+                        presenciaService.estaConectado(u.getId())
+                ))
+                .toList();
+
+        return ResponseEntity.ok(resultado);
+    }
+}

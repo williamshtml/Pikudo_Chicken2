@@ -44,7 +44,7 @@ Problemas a corregir:
 
 ## Paquetes actuales detectados
 
-Existen clases bajo `com.pikudo` y una clase principal en `com.restaurant` que escanea ambos paquetes.
+La raiz Java oficial del backend es `com.pikudo.restaurant`. La clase principal vive en `src/main/java/com/pikudo/restaurant/PikudoChicken2Application.java` y usa el component scan normal de Spring Boot desde esa raiz.
 
 Paquetes detectados por búsqueda:
 

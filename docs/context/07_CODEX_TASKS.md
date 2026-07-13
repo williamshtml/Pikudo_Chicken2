@@ -10,12 +10,12 @@ Analizar:
 
 - `pom.xml`
 - `src/main/resources/application.properties`
-- `src/main/java/com/restaurant/PikudoChicken2Application.java`
-- `src/main/java/com/pikudo/config/SecurityConfig.java`
-- `src/main/java/com/pikudo/entity/*`
-- `src/main/java/com/pikudo/controller/*`
-- `src/main/java/com/pikudo/service/*`
-- `src/main/java/com/pikudo/repository/*`
+- `src/main/java/com/pikudo/restaurant/PikudoChicken2Application.java`
+- `src/main/java/com/pikudo/restaurant/config/SecurityConfig.java`
+- `src/main/java/com/pikudo/restaurant/entity/*`
+- `src/main/java/com/pikudo/restaurant/controller/*`
+- `src/main/java/com/pikudo/restaurant/service/*`
+- `src/main/java/com/pikudo/restaurant/repository/*`
 - `fronted/package.json`
 
 Salida esperada:
@@ -94,7 +94,7 @@ Estas tablas aportan valor sin obligar a rediseñar toda la carta de inmediato.
 Crear módulo:
 
 ```text
-com.pikudo.backups
+com.pikudo.restaurant.backups
 ```
 
 Componentes:

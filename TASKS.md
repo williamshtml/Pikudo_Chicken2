@@ -10,6 +10,7 @@
 - Fase 5 - Flujo operativo de pedidos, mesas y caja: completada.
 - Fase 6 - Comprobantes SUNAT: base real inicial implementada; pendiente validacion sandbox/prod con credenciales reales.
 - Fase 7 - Delivery, GPS y tracking real: activa.
+- Limpieza estructural - Raiz Java normalizada a `com.pikudo.restaurant`; stubs legacy vacios eliminados de forma conservadora.
 
 `docs/context/07_CODEX_TASKS.md` queda como historico. Este archivo es el tablero vivo para ordenar las siguientes implementaciones.
 
@@ -117,6 +118,15 @@
 - [x] Vista publica con estado, avance, ETA/distancia aproximada y cercania, sin coordenadas exactas.
 - [ ] Vista admin con mapa exacto y eventos de llegada a puntos de entrega.
 - [ ] App Flutter envia GPS solo con entrega activa y muestra mapa/deep link para guiar al repartidor.
+
+## Limpieza estructural
+
+- [x] Raiz Java oficial normalizada a `com.pikudo.restaurant`.
+- [x] Clase main movida a `src/main/java/com/pikudo/restaurant/PikudoChicken2Application.java`.
+- [x] `pom.xml` usa `groupId` `com.pikudo.restaurant`.
+- [x] `nbactions.xml` apunta a `com.pikudo.restaurant.PikudoChicken2Application`.
+- [x] Stubs NetBeans/legacy vacios y sin referencias externas eliminados.
+- [ ] Deuda menor: revisar con mas calma clases vacias aun referenciadas por codigo real heredado (`Repartidor`, `UbicacionDTO`, `DireccionEntrega`, `ZonaReparto`) antes de borrarlas o reemplazarlas.
 
 ## Fase 8 - Promociones, descuentos y eventos
 

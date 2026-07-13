@@ -85,7 +85,7 @@ Responsable de adaptadores tecnicos:
 ## Convencion de paquetes objetivo
 
 ```text
-com.pikudo
+com.pikudo.restaurant
   config
   shared
     api
@@ -112,7 +112,7 @@ com.pikudo
   integrations
 ```
 
-No renombrar todo de golpe. Crear subpaquetes modulares dentro de `com.pikudo` y migrar incrementalmente.
+La normalizacion de raiz a `com.pikudo.restaurant` ya quedo aplicada. La modularizacion profunda debe hacerse incrementalmente creando subpaquetes internos por dominio sin cambiar contratos publicos de golpe.
 
 ## Admin y seguridad
 
