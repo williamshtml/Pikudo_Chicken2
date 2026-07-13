@@ -2,8 +2,10 @@ package com.pikudo.controller.delivery;
 
 import com.pikudo.dto.tracking.UbicacionDTO;
 import com.pikudo.dto.tracking.UbicacionEntranteDTO;
+import com.pikudo.dto.delivery.DeliveryLocationRequestDTO;
 import com.pikudo.entity.Usuario;
 import com.pikudo.repository.UsuarioRepository;
+import com.pikudo.service.delivery.DeliveryTrackingService;
 import com.pikudo.service.impl.PresenciaRepartidorServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class TrackingController {
     private final SimpMessagingTemplate messagingTemplate;
     private final PresenciaRepartidorServiceImpl presenciaService;
     private final UsuarioRepository usuarioRepository;
+    private final DeliveryTrackingService deliveryTrackingService;
 
     /**
      * El celular del repartidor llama esto justo despues de conectarse.
@@ -76,7 +79,12 @@ public class TrackingController {
                 System.currentTimeMillis()
         );
 
-        // Guarda en la estructura concurrente en memoria (sin tocar tablas SQL)
+        DeliveryLocationRequestDTO request = new DeliveryLocationRequestDTO();
+        request.setLatitude(java.math.BigDecimal.valueOf(entrante.getLat()));
+        request.setLongitude(java.math.BigDecimal.valueOf(entrante.getLng()));
+        deliveryTrackingService.reportActiveDriverLocation(repartidorId, request);
+
+        // Mantiene compatibilidad con la carga inicial de paneles actuales.
         presenciaService.actualizarUltimaUbicacion(repartidorId, ubicacion);
 
         // Retransmite en vivo a los paneles de administración y caja
