@@ -93,4 +93,16 @@ public class NotaCredito {
 
     @Column(name = "sunat_ticket", length = 120)
     private String sunatTicket;
+
+    @Column(name = "sunat_response_code", length = 40)
+    private String sunatResponseCode;
+
+    @Column(name = "sunat_response_description")
+    private String sunatResponseDescription;
+
+    @Column(name = "sunat_sent_at")
+    private LocalDateTime sunatSentAt;
+
+    @Column(name = "sunat_accepted_at")
+    private LocalDateTime sunatAcceptedAt;
 }

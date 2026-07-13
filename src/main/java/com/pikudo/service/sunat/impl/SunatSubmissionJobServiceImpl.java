@@ -2,19 +2,28 @@ package com.pikudo.service.sunat.impl;
 
 import com.pikudo.entity.Comprobante;
 import com.pikudo.entity.NotaCredito;
+import com.pikudo.entity.NotaDebito;
 import com.pikudo.entity.sunat.SunatSubmissionJob;
 import com.pikudo.entity.sunat.SunatSubmissionStatus;
+import com.pikudo.exception.ResourceNotFoundException;
 import com.pikudo.repository.sunat.SunatSubmissionJobRepository;
+import com.pikudo.service.sunat.SunatDocumentProcessor;
 import com.pikudo.service.sunat.SunatSubmissionJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SunatSubmissionJobServiceImpl implements SunatSubmissionJobService {
 
     private final SunatSubmissionJobRepository repository;
+    private final SunatDocumentProcessor processor;
 
     @Override
     @Transactional
@@ -34,5 +43,51 @@ public class SunatSubmissionJobServiceImpl implements SunatSubmissionJobService 
                 .documentType("NOTA_CREDITO")
                 .status(SunatSubmissionStatus.PENDING)
                 .build());
+    }
+
+    @Override
+    @Transactional
+    public void enqueue(NotaDebito notaDebito) {
+        repository.save(SunatSubmissionJob.builder()
+                .notaDebito(notaDebito)
+                .documentType("NOTA_DEBITO")
+                .status(SunatSubmissionStatus.PENDING)
+                .build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SunatSubmissionJob> list(SunatSubmissionStatus status) {
+        if (status != null) {
+            return repository.findByStatusOrderByFechaCreacionDesc(status);
+        }
+        return repository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public SunatSubmissionJob retry(UUID id) {
+        SunatSubmissionJob job = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job SUNAT no encontrado: " + id));
+        job.setStatus(SunatSubmissionStatus.PENDING);
+        job.setNextRetryAt(null);
+        job.setLastError(null);
+        return job;
+    }
+
+    @Override
+    @Transactional
+    public int processPending() {
+        List<SunatSubmissionStatus> retryable = List.of(SunatSubmissionStatus.PENDING, SunatSubmissionStatus.FAILED_RETRYABLE);
+        List<SunatSubmissionJob> jobs = new ArrayList<>();
+        jobs.addAll(repository.findTop25ByStatusInAndNextRetryAtIsNullOrderByFechaCreacionAsc(retryable));
+        jobs.addAll(repository.findTop25ByStatusInAndNextRetryAtBeforeOrderByFechaCreacionAsc(retryable, LocalDateTime.now()));
+        int processed = 0;
+        for (SunatSubmissionJob job : jobs.stream().distinct().limit(25).toList()) {
+            job.setStatus(SunatSubmissionStatus.PROCESSING);
+            processor.process(job);
+            processed++;
+        }
+        return processed;
     }
 }

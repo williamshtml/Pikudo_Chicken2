@@ -69,6 +69,18 @@ public class SunatSubmissionJob {
     @Column(name = "last_error")
     private String lastError;
 
+    @Column(name = "sunat_response_code", length = 40)
+    private String sunatResponseCode;
+
+    @Column(name = "sunat_response_description")
+    private String sunatResponseDescription;
+
+    @Column(name = "sunat_sent_at")
+    private LocalDateTime sunatSentAt;
+
+    @Column(name = "sunat_accepted_at")
+    private LocalDateTime sunatAcceptedAt;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 
