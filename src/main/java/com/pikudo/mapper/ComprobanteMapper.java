@@ -33,6 +33,13 @@ public class ComprobanteMapper {
         r.setTotal(c.getMontoTotal());
         r.setRuc(c.getRuc());
         r.setRazonSocial(c.getRazonSocial());
+        r.setTipoDocumentoCliente(c.getTipoDocumentoCliente());
+        r.setNumeroDocumentoCliente(c.getNumeroDocumentoCliente());
+        r.setClienteNombreSnapshot(c.getClienteNombreSnapshot());
+        r.setEstadoSunat(c.getEstadoSunat() != null ? c.getEstadoSunat().name() : null);
+        r.setMensajeSunat(c.getMensajeSunat());
+        r.setDocumentFolderType(c.getDocumentFolderType());
+        r.setFechaEmision(c.getFechaEmision());
         Pedido p = c.getPedido();
         r.setNombreCajero(p.getCajero() != null ? p.getCajero().getUsername() : "N/A");
         if ("MESA".equals(p.getTipoPedido())) {

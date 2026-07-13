@@ -19,6 +19,8 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
     // Método necesario para obtener el siguiente correlativo según el tipo (Factura o Boleta)
     long countByTipoComprobante(TipoComprobante tipoComprobante);
 
+    boolean existsByPedidoId(Long pedidoId);
+
     // NUEVO: historial de ventas filtrado por rango de fechas
     @Query("SELECT c FROM Comprobante c WHERE c.fechaEmision BETWEEN :inicio AND :fin ORDER BY c.fechaEmision DESC")
     List<Comprobante> findByFechaEmisionBetween(LocalDateTime inicio, LocalDateTime fin);

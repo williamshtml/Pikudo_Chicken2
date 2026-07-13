@@ -1,6 +1,7 @@
 package com.pikudo.entity;
 
 import com.pikudo.entity.caja.TransaccionPago;
+import com.pikudo.entity.storage.StorageFile;
 import jakarta.persistence.Index;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -10,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.FetchType;
@@ -121,4 +123,35 @@ public class Comprobante {
 
     @Column(name = "direccion_cliente", length = 255)
     private String direccionCliente;
+
+    @Column(name = "cliente_nombre_snapshot", length = 180)
+    private String clienteNombreSnapshot;
+
+    @Column(name = "document_folder_type", length = 40)
+    private String documentFolderType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "xml_storage_file_id")
+    private StorageFile xmlStorageFile;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cdr_storage_file_id")
+    private StorageFile cdrStorageFile;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pdf_storage_file_id")
+    private StorageFile pdfStorageFile;
+
+    @Builder.Default
+    @Column(name = "sunat_attempts", nullable = false)
+    private Integer sunatAttempts = 0;
+
+    @Column(name = "sunat_next_retry_at")
+    private LocalDateTime sunatNextRetryAt;
+
+    @Column(name = "sunat_last_error")
+    private String sunatLastError;
+
+    @Column(name = "sunat_ticket", length = 120)
+    private String sunatTicket;
 }

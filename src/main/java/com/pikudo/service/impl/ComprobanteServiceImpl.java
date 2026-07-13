@@ -4,9 +4,20 @@ import com.pikudo.dto.comprobante.AnularComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteRequestDTO;
 import com.pikudo.dto.comprobante.ComprobanteResponseDTO;
 import com.pikudo.dto.comprobante.NotaCreditoResponseDTO;
-import com.pikudo.dto.sunat.ResultadoEnvioSunatDTO;
-import com.pikudo.entity.*;
+import com.pikudo.entity.Comprobante;
+import com.pikudo.entity.DetallePedido;
+import com.pikudo.entity.EstadoComprobante;
+import com.pikudo.entity.EstadoPedido;
+import com.pikudo.entity.EstadoSunat;
+import com.pikudo.entity.NotaCredito;
+import com.pikudo.entity.Pedido;
+import com.pikudo.entity.TipoComprobante;
+import com.pikudo.entity.Usuario;
 import com.pikudo.entity.caja.TransaccionPago;
+import com.pikudo.entity.orders.OrderOperationalStatus;
+import com.pikudo.entity.orders.OrderPayment;
+import com.pikudo.entity.orders.OrderPaymentStatus;
+import com.pikudo.entity.orders.OrderPaymentStatusType;
 import com.pikudo.exception.BusinessException;
 import com.pikudo.mapper.ComprobanteMapper;
 import com.pikudo.mapper.NotaCreditoMapper;
@@ -14,11 +25,13 @@ import com.pikudo.repository.ComprobanteRepository;
 import com.pikudo.repository.NotaCreditoRepository;
 import com.pikudo.repository.PedidoRepository;
 import com.pikudo.repository.UsuarioRepository;
+import com.pikudo.repository.orders.OrderPaymentRepository;
 import com.pikudo.service.ComprobanteService;
-import com.pikudo.service.FacturacionElectronicaService;
 import com.pikudo.service.InventarioService;
-import com.pikudo.service.PagoService;
 import com.pikudo.service.TicketPrinterService;
+import com.pikudo.service.orders.TableSessionService;
+import com.pikudo.service.sunat.DocumentSequenceService;
+import com.pikudo.service.sunat.SunatSubmissionJobService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -40,39 +53,44 @@ import java.util.stream.Collectors;
 @Transactional
 public class ComprobanteServiceImpl implements ComprobanteService {
 
+    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
+
     private final ComprobanteRepository comprobanteRepository;
     private final PedidoRepository pedidoRepository;
     private final NotaCreditoRepository notaCreditoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final OrderPaymentRepository orderPaymentRepository;
     private final ComprobanteMapper comprobanteMapper;
     private final NotaCreditoMapper notaCreditoMapper;
     private final TicketPrinterService ticketPrinterService;
-    private final PagoService pagoService;
     private final InventarioService inventarioService;
-    private final FacturacionElectronicaService facturacionElectronicaService;
-    private static final BigDecimal TASA_IGV = new BigDecimal("0.18");
+    private final TableSessionService tableSessionService;
+    private final DocumentSequenceService documentSequenceService;
+    private final SunatSubmissionJobService sunatSubmissionJobService;
 
     @Override
     public ComprobanteResponseDTO emitir(ComprobanteRequestDTO dto) {
         Pedido pedido = pedidoRepository.findById(dto.getPedidoId())
                 .orElseThrow(() -> new BusinessException("Pedido no encontrado: " + dto.getPedidoId()));
-        if (pedido.getEstado() == EstadoPedido.PAID) {
+        if (comprobanteRepository.existsByPedidoId(pedido.getId())) {
             throw new BusinessException("El pedido ya tiene un comprobante emitido");
         }
-        TipoComprobante tipo = TipoComprobante.valueOf(dto.getTipoComprobante().toUpperCase());
-        if (tipo == TipoComprobante.FACTURA && (dto.getRuc() == null || dto.getRazonSocial() == null)) {
-            throw new BusinessException("RUC y Razón Social obligatorios para factura");
+        if (pedido.getEstadoPago() != OrderPaymentStatus.PAID) {
+            throw new BusinessException("No se puede emitir comprobante: el pedido aun tiene saldo pendiente.");
         }
+
+        Usuario cajero = currentUser();
+        TipoComprobante tipo = normalizeTipo(dto);
+        validateCliente(dto, tipo);
 
         BigDecimal montoTotal = pedido.getTotal();
         BigDecimal montoNeto = montoTotal.divide(BigDecimal.ONE.add(TASA_IGV), 2, RoundingMode.HALF_UP);
         BigDecimal igv = montoTotal.subtract(montoNeto);
-        String serie = (tipo == TipoComprobante.FACTURA) ? "F001" : "B001";
+        String serie = serieFor(tipo);
 
         Comprobante guardado;
         try {
-            String correlativo = String.format("%08d", comprobanteRepository.countByTipoComprobante(tipo) + 1);
-
+            String correlativo = documentSequenceService.nextCorrelativo(sequenceType(tipo), serie);
             Comprobante comprobante = Comprobante.builder()
                     .pedido(pedido)
                     .tipoComprobante(tipo)
@@ -83,40 +101,36 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                     .montoTotal(montoTotal)
                     .ruc(dto.getRuc())
                     .razonSocial(dto.getRazonSocial())
-                    .tipoDocumentoCliente(dto.getTipoDocumentoCliente())
-                    .numeroDocumentoCliente(dto.getNumeroDocumentoCliente())
+                    .tipoDocumentoCliente(resolveTipoDocumento(dto, tipo))
+                    .numeroDocumentoCliente(resolveNumeroDocumento(dto, tipo))
                     .direccionCliente(dto.getDireccionCliente())
+                    .clienteNombreSnapshot(resolveClienteSnapshot(dto, tipo))
+                    .documentFolderType(folderTypeFor(tipo))
                     .estado(EstadoComprobante.EMITIDO)
                     .estadoSunat(EstadoSunat.NO_ENVIADO)
                     .build();
-
-            List<TransaccionPago> transacciones = pagoService.procesarPagos(comprobante, dto.getPagos(), montoTotal);
-            comprobante.setPagos(transacciones);
-
+            comprobante.setPagos(buildTransaccionesFromOrderPayments(comprobante, pedido));
             guardado = comprobanteRepository.save(comprobante);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException("Se produjo una colisión al generar el número de comprobante. Intenta emitir nuevamente.");
+            throw new BusinessException("Se produjo una colision al generar el numero de comprobante. Intenta emitir nuevamente.");
         }
 
+        pedido.setCajero(cajero);
         pedido.setEstado(EstadoPedido.PAID);
+        pedido.setEstadoPago(OrderPaymentStatus.PAID);
+        if (pedido.getEstadoOperativo() != OrderOperationalStatus.CANCELLED
+                && pedido.getEstadoOperativo() != OrderOperationalStatus.REJECTED) {
+            pedido.setEstadoOperativo(OrderOperationalStatus.DELIVERED);
+        }
         pedido.setTipoComprobante(tipo);
         pedidoRepository.save(pedido);
+        tableSessionService.closeIfNoOpenOrders(pedido.getTableSession(), cajero);
 
         for (DetallePedido detalle : pedido.getDetalles()) {
             inventarioService.descontarStockPorVenta(detalle.getProducto().getId(), detalle.getCantidad());
         }
 
-        try {
-            ResultadoEnvioSunatDTO resultado = facturacionElectronicaService.enviarComprobante(guardado);
-            guardado.setEstadoSunat(resultado.getEstado());
-            guardado.setHashSunat(resultado.getHash());
-            guardado.setMensajeSunat(resultado.getMensaje());
-            guardado.setUrlPdfSunat(resultado.getUrlPdf());
-            comprobanteRepository.save(guardado);
-        } catch (Exception e) {
-            log.error("Fallo al enviar comprobante {}-{} a SUNAT: {}. La venta ya está registrada de todas formas.",
-                    guardado.getSerie(), guardado.getCorrelativo(), e.getMessage(), e);
-        }
+        sunatSubmissionJobService.enqueue(guardado);
 
         if (tipo == TipoComprobante.FACTURA) {
             ticketPrinterService.imprimirFactura(guardado);
@@ -161,10 +175,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             throw new BusinessException("Este comprobante ya fue anulado anteriormente");
         }
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
-
+        Usuario usuario = currentUser();
         Pedido pedido = comprobante.getPedido();
 
         for (DetallePedido detalle : pedido.getDetalles()) {
@@ -172,44 +183,117 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         }
 
         pedido.setEstado(EstadoPedido.CANCELLED);
+        pedido.setEstadoOperativo(OrderOperationalStatus.CANCELLED);
+        pedido.setEstadoPago(OrderPaymentStatus.VOIDED);
         pedidoRepository.save(pedido);
+        tableSessionService.closeIfNoOpenOrders(pedido.getTableSession(), usuario);
 
         NotaCredito guardada;
         try {
-            String correlativo = String.format("%08d", notaCreditoRepository.count() + 1);
-
+            String correlativo = documentSequenceService.nextCorrelativo(TipoComprobante.NOTA_CREDITO, "NC01");
             NotaCredito notaCredito = NotaCredito.builder()
                     .comprobante(comprobante)
+                    .serie("NC01")
                     .correlativo(correlativo)
                     .motivo(dto.getMotivo())
                     .montoDevuelto(comprobante.getMontoTotal())
                     .usuarioEmisor(usuario)
                     .estadoSunat(EstadoSunat.NO_ENVIADO)
                     .build();
-
             guardada = notaCreditoRepository.save(notaCredito);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException("Se produjo una colisión al generar la nota de crédito. Intenta nuevamente.");
+            throw new BusinessException("Se produjo una colision al generar la nota de credito. Intenta nuevamente.");
         }
 
         comprobante.setEstado(EstadoComprobante.ANULADO);
         comprobanteRepository.save(comprobante);
-
-        try {
-            ResultadoEnvioSunatDTO resultado = facturacionElectronicaService.enviarNotaCredito(guardada);
-            guardada.setEstadoSunat(resultado.getEstado());
-            guardada.setHashSunat(resultado.getHash());
-            guardada.setMensajeSunat(resultado.getMensaje());
-            notaCreditoRepository.save(guardada);
-        } catch (Exception e) {
-            log.error("Fallo al enviar nota de crédito {}-{} a SUNAT: {}",
-                    guardada.getSerie(), guardada.getCorrelativo(), e.getMessage(), e);
-        }
+        sunatSubmissionJobService.enqueue(guardada);
 
         ticketPrinterService.imprimirNotaCredito(guardada);
-
-        log.warn("Comprobante #{} anulado por usuario '{}'. Motivo: {}", comprobanteId, username, dto.getMotivo());
-
+        log.warn("Comprobante #{} anulado por usuario '{}'. Motivo: {}", comprobanteId, usuario.getUsername(), dto.getMotivo());
         return notaCreditoMapper.toDTO(guardada);
+    }
+
+    private List<TransaccionPago> buildTransaccionesFromOrderPayments(Comprobante comprobante, Pedido pedido) {
+        List<OrderPayment> confirmedPayments = orderPaymentRepository.findByPedidoIdOrderByFechaCreacionAscIdAsc(pedido.getId())
+                .stream()
+                .filter(payment -> payment.getStatus() == OrderPaymentStatusType.CONFIRMED)
+                .toList();
+        if (confirmedPayments.isEmpty()) {
+            throw new BusinessException("El pedido no tiene pagos operativos confirmados para emitir comprobante.");
+        }
+        return confirmedPayments.stream()
+                .map(payment -> TransaccionPago.builder()
+                        .comprobante(comprobante)
+                        .metodoPago(payment.getMetodoPago())
+                        .monto(payment.getMonto())
+                        .build())
+                .toList();
+    }
+
+    private TipoComprobante normalizeTipo(ComprobanteRequestDTO dto) {
+        TipoComprobante requested = TipoComprobante.valueOf(dto.getTipoComprobante().toUpperCase());
+        if (requested == TipoComprobante.BOLETA) {
+            boolean hasDocument = dto.getNumeroDocumentoCliente() != null && !dto.getNumeroDocumentoCliente().isBlank();
+            return hasDocument ? TipoComprobante.BOLETA_CON_DOCUMENTO : TipoComprobante.BOLETA_SIMPLE;
+        }
+        return requested;
+    }
+
+    private void validateCliente(ComprobanteRequestDTO dto, TipoComprobante tipo) {
+        if (tipo == TipoComprobante.FACTURA && (isBlank(dto.getRuc()) || isBlank(dto.getRazonSocial()))) {
+            throw new BusinessException("RUC y razon social son obligatorios para factura");
+        }
+        if (tipo == TipoComprobante.BOLETA_CON_DOCUMENTO
+                && (isBlank(dto.getTipoDocumentoCliente()) || isBlank(dto.getNumeroDocumentoCliente()))) {
+            throw new BusinessException("Tipo y numero de documento son obligatorios para boleta con documento");
+        }
+    }
+
+    private TipoComprobante sequenceType(TipoComprobante tipo) {
+        return tipo == TipoComprobante.BOLETA_CON_DOCUMENTO ? TipoComprobante.BOLETA_SIMPLE : tipo;
+    }
+
+    private String serieFor(TipoComprobante tipo) {
+        return switch (tipo) {
+            case FACTURA -> "F001";
+            case NOTA_CREDITO -> "NC01";
+            case NOTA_DEBITO -> "ND01";
+            default -> "B001";
+        };
+    }
+
+    private String folderTypeFor(TipoComprobante tipo) {
+        return switch (tipo) {
+            case FACTURA -> "FACTURAS";
+            case NOTA_CREDITO -> "NOTAS_DE_CREDITO";
+            case NOTA_DEBITO -> "NOTAS_DE_DEBITO";
+            default -> "BOLETAS";
+        };
+    }
+
+    private String resolveTipoDocumento(ComprobanteRequestDTO dto, TipoComprobante tipo) {
+        return tipo == TipoComprobante.BOLETA_SIMPLE ? "SIN_DOCUMENTO" : dto.getTipoDocumentoCliente();
+    }
+
+    private String resolveNumeroDocumento(ComprobanteRequestDTO dto, TipoComprobante tipo) {
+        return tipo == TipoComprobante.BOLETA_SIMPLE ? null : dto.getNumeroDocumentoCliente();
+    }
+
+    private String resolveClienteSnapshot(ComprobanteRequestDTO dto, TipoComprobante tipo) {
+        if (tipo == TipoComprobante.FACTURA) {
+            return dto.getRazonSocial();
+        }
+        return tipo == TipoComprobante.BOLETA_SIMPLE ? "PUBLICO_GENERAL" : dto.getNumeroDocumentoCliente();
+    }
+
+    private Usuario currentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

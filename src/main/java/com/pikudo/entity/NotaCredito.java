@@ -1,5 +1,6 @@
 package com.pikudo.entity;
 
+import com.pikudo.entity.storage.StorageFile;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -67,4 +68,29 @@ public class NotaCredito {
 
     @Column(name = "mensaje_sunat", length = 500)
     private String mensajeSunat;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "xml_storage_file_id")
+    private StorageFile xmlStorageFile;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cdr_storage_file_id")
+    private StorageFile cdrStorageFile;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pdf_storage_file_id")
+    private StorageFile pdfStorageFile;
+
+    @Builder.Default
+    @Column(name = "sunat_attempts", nullable = false)
+    private Integer sunatAttempts = 0;
+
+    @Column(name = "sunat_next_retry_at")
+    private LocalDateTime sunatNextRetryAt;
+
+    @Column(name = "sunat_last_error")
+    private String sunatLastError;
+
+    @Column(name = "sunat_ticket", length = 120)
+    private String sunatTicket;
 }

@@ -1,35 +1,38 @@
 package com.pikudo.dto.comprobante;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-@Getter              // Genera los métodos de lectura para pintar el comprobante en la UI
-@Setter              // Genera los métodos de escritura para armar la respuesta desde el Service
-@NoArgsConstructor   // Constructor vacío () estándar para Jackson
-@AllArgsConstructor  // Constructor gigante resuelto por Lombok en una sola línea
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ComprobanteResponseDTO {
-    private Long id;              // ID único del comprobante emitido
-    private Long pedidoId;        // ID del pedido de origen
-    private String tipoComprobante;// BOLETA, FACTURA o TICKET
-    private String serie;         // Serie del documento (ej: "F001", "B001")
-    private Integer numeroCorrelativo; // Número secuencial autoincrementable (ej: 145)
 
-    // Reemplaza al antiguo campo "metodoPago" (String unico): ahora un comprobante
-    // puede tener varios pagos (ej: mitad efectivo, mitad Yape). El frontend usa
-    // esta lista para mostrar el desglose completo de como se pago la cuenta.
+    private Long id;
+    private Long pedidoId;
+    private String tipoComprobante;
+    private String serie;
+    private Integer numeroCorrelativo;
     private List<PagoDetalleDTO> pagos;
-
-    private BigDecimal subtotal;  // Monto base neto sin impuestos
-    private BigDecimal igv;       // Impuesto calculado (18%)
-    private BigDecimal total;     // Monto final cobrado al cliente de la pollería
-    private String ruc;           // RUC de la empresa (si fue factura)
-    private String razonSocial;   // Nombre legal de la empresa (si fue factura)
-    private LocalDateTime fechaEmision; // Fecha y hora exacta en la que se cerró la venta
-    
-    // Campos incorporados para impresión en ticket
-    private String nombreCajero;  // Nombre del usuario que procesó el cobro
-    private String nombreMesero;  // Nombre del usuario que atendió la mesa (nulo si es pedido de caja)
+    private BigDecimal subtotal;
+    private BigDecimal igv;
+    private BigDecimal total;
+    private String ruc;
+    private String razonSocial;
+    private String tipoDocumentoCliente;
+    private String numeroDocumentoCliente;
+    private String clienteNombreSnapshot;
+    private String estadoSunat;
+    private String mensajeSunat;
+    private String documentFolderType;
+    private LocalDateTime fechaEmision;
+    private String nombreCajero;
+    private String nombreMesero;
 }
