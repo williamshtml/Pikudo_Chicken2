@@ -50,15 +50,15 @@
 
 ## Fase 3 - Integraciones base y storage
 
-- [ ] Normalizar variables `.env` para Google Drive, Resend y SUNAT sin commitear secretos.
-- [ ] Crear abstraccion `StorageService` para archivos binarios.
-- [ ] Implementar provider local como fallback.
-- [ ] Implementar provider Google Drive con OAuth refresh token.
-- [ ] Registrar metadata de archivos subidos: provider, folder, file id, url, mime type, tamano, checksum y modulo propietario.
-- [ ] Migrar `ArchivoService` para usar la abstraccion de storage.
+- [x] Normalizar variables `.env` para Google Drive, Resend y SUNAT sin commitear secretos.
+- [x] Crear abstraccion `StorageService` para archivos binarios.
+- [x] Implementar provider local como fallback.
+- [x] Implementar provider Google Drive con OAuth refresh token.
+- [x] Registrar metadata de archivos subidos: provider, folder, file id, url, mime type, tamano, checksum y modulo propietario.
+- [x] Migrar `ArchivoService` para usar la abstraccion de storage.
 - [ ] Preparar carpetas Drive para productos, avatares, evidencias y documentos SUNAT.
-- [ ] Agregar cliente Resend API deshabilitable por env.
-- [ ] Preparar configuracion SUNAT para `.pfx`, credenciales SOL, endpoints beta/prod y modo disabled/sandbox/prod.
+- [x] Agregar cliente Resend API deshabilitable por env.
+- [x] Preparar configuracion SUNAT para `.pfx`, credenciales SOL, endpoints beta/prod y modo disabled/sandbox/prod.
 - [ ] Documentar smoke tests de Drive/Resend/SUNAT sin depender de secretos reales.
 
 ## Fase 4 - Catalogo real con Drive
