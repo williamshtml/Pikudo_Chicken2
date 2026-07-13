@@ -19,6 +19,11 @@ public class PedidoMapper {
         r.setMesaNumero(p.getMesa() != null ? p.getMesa().getNumero() : 0);
         r.setTotal(p.getTotal());
         r.setEstadoPedido(p.getEstado().name());
+        r.setEstadoOperativo(p.getEstadoOperativo() != null ? p.getEstadoOperativo().name() : null);
+        r.setEstadoPago(p.getEstadoPago() != null ? p.getEstadoPago().name() : null);
+        r.setOrderCode(p.getOrderCode());
+        r.setTrackingCode(p.getTrackingCode());
+        r.setTableSessionId(p.getTableSession() != null ? p.getTableSession().getId() : null);
         r.setTipoPedido(p.getTipoPedido()); 
         r.setDireccion(p.getDireccion());
         r.setUrlMaps(p.getUrlMaps());
@@ -54,8 +59,13 @@ public class PedidoMapper {
             r.setDetalles(p.getDetalles().stream().map(d -> {
                 PedidoResponseDTO.DetalleItemDTO item = new PedidoResponseDTO.DetalleItemDTO();
                 item.setId(d.getId());
-                item.setProductoNombre(d.getProducto().getNombre());
+                item.setVarianteId(d.getVariante() != null ? d.getVariante().getId() : null);
+                item.setProductoNombre(d.getProductoNombreSnapshot() != null ? d.getProductoNombreSnapshot() : d.getProducto().getNombre());
+                item.setVarianteNombre(d.getVarianteNombreSnapshot());
                 item.setPrecioUnitario(d.getPrecioUnitario());
+                item.setDiscountAmount(d.getDiscountAmount());
+                item.setTaxAmount(d.getTaxAmount());
+                item.setLineTotal(d.getLineTotal());
                 item.setCantidad(d.getCantidad());
                 item.setSubtotal(d.getSubtotal());
                 item.setObservaciones(d.getObservaciones());

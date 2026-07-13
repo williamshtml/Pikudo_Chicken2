@@ -1,5 +1,10 @@
 package com.pikudo.entity;
 
+import com.pikudo.entity.orders.OrderOperationalStatus;
+import com.pikudo.entity.orders.OrderPaymentStatus;
+import com.pikudo.entity.orders.OrderServiceType;
+import com.pikudo.entity.orders.OrderSource;
+import com.pikudo.entity.orders.TableSession;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -47,6 +52,10 @@ public class Pedido extends Auditable {
     @JoinColumn(name = "repartidor_id")
     private Usuario repartidor;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "table_session_id")
+    private TableSession tableSession;
+
     @Builder.Default
     @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
@@ -54,9 +63,59 @@ public class Pedido extends Auditable {
 
     @Builder.Default
     @NotNull
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @NotNull
+    @Column(name = "discount_total", nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountTotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @NotNull
+    @Column(name = "tax_total", nullable = false, precision = 10, scale = 2)
+    private BigDecimal taxTotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @NotNull
+    @Column(name = "delivery_fee", nullable = false, precision = 10, scale = 2)
+    private BigDecimal deliveryFee = BigDecimal.ZERO;
+
+    @Builder.Default
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoPedido estado = EstadoPedido.PENDING;
+
+    @Builder.Default
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_operativo", nullable = false, length = 30)
+    private OrderOperationalStatus estadoOperativo = OrderOperationalStatus.UNREAD;
+
+    @Builder.Default
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago", nullable = false, length = 30)
+    private OrderPaymentStatus estadoPago = OrderPaymentStatus.UNPAID;
+
+    @Column(name = "order_code", nullable = false, unique = true, length = 40)
+    private String orderCode;
+
+    @Column(name = "tracking_code", length = 80)
+    private String trackingCode;
+
+    @Builder.Default
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private OrderSource source = OrderSource.DINE_IN;
+
+    @Builder.Default
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "service_type", nullable = false, length = 30)
+    private OrderServiceType serviceType = OrderServiceType.DINE_IN;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", length = 20)

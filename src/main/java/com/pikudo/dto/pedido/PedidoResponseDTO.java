@@ -41,6 +41,11 @@ public class PedidoResponseDTO {
     private BigDecimal subtotalNeto;
     private BigDecimal igv;
     private String estadoPedido;
+    private String estadoOperativo;
+    private String estadoPago;
+    private String orderCode;
+    private String trackingCode;
+    private Long tableSessionId;
     private List<DetalleItemDTO> detalles;
 
     @Getter
@@ -49,8 +54,13 @@ public class PedidoResponseDTO {
     @AllArgsConstructor
     public static class DetalleItemDTO {
         private Long id;
+        private Long varianteId;
         private String productoNombre;
+        private String varianteNombre;
         private BigDecimal precioUnitario;
+        private BigDecimal discountAmount;
+        private BigDecimal taxAmount;
+        private BigDecimal lineTotal;
         private Integer cantidad;
         private BigDecimal subtotal;
         private String observaciones;

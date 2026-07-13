@@ -2,8 +2,8 @@ package com.pikudo.service.impl;
 import com.pikudo.dto.mesa.MesaEstadoResponseDTO;
 import com.pikudo.dto.mesa.MesaRequestDTO;
 import com.pikudo.dto.mesa.MesaResponseDTO;
-import com.pikudo.entity.EstadoPedido;
 import com.pikudo.entity.Mesa;
+import com.pikudo.entity.orders.OrderOperationalStatus;
 import com.pikudo.exception.BusinessException;
 import com.pikudo.exception.ResourceNotFoundException;
 import com.pikudo.mapper.MesaMapper;
@@ -19,6 +19,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MesaServiceImpl implements MesaService {
+    private static final List<OrderOperationalStatus> TERMINAL_STATUSES = List.of(
+            OrderOperationalStatus.REJECTED,
+            OrderOperationalStatus.DELIVERED,
+            OrderOperationalStatus.CANCELLED
+    );
+
     private final MesaRepository mesaRepository;
     private final PedidoRepository pedidoRepository;
     private final MesaMapper mesaMapper;
@@ -60,7 +66,7 @@ public class MesaServiceImpl implements MesaService {
                     // La ocupacion se calcula en el momento, no se guarda como campo fijo:
                     // evita que quede desincronizada con el estado real de los pedidos.
                     boolean tienePedidoAbierto = !pedidoRepository
-                            .findByMesaIdAndEstadoNot(mesa.getId(), EstadoPedido.PAID)
+                            .findByMesaIdAndEstadoOperativoNotIn(mesa.getId(), TERMINAL_STATUSES)
                             .isEmpty();
 
                     return new MesaEstadoResponseDTO(
@@ -102,7 +108,7 @@ public class MesaServiceImpl implements MesaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con id: " + id));
 
         boolean tienePedidoAbierto = !pedidoRepository
-                .findByMesaIdAndEstadoNot(id, EstadoPedido.PAID)
+                .findByMesaIdAndEstadoOperativoNotIn(id, TERMINAL_STATUSES)
                 .isEmpty();
 
         if (tienePedidoAbierto) {
