@@ -17,6 +17,10 @@ public class CajaResumenDTO {
     private BigDecimal montoVentasEfectivo;
     private BigDecimal montoVentasTarjeta;
     private BigDecimal montoVentasDigital;
+    private BigDecimal montoVentasTotal;
     private BigDecimal montoGastos;
     private BigDecimal montoEsperadoEnCajon; // montoInicial + efectivo - gastos
+    private BigDecimal montoFinalReal;
+    private BigDecimal diferencia;
+    private Boolean tienePagosParcialesPendientes;
 }

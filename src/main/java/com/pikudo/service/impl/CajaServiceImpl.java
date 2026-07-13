@@ -12,8 +12,8 @@ import com.pikudo.entity.caja.Gasto;
 import com.pikudo.repository.CajaRepository;
 import com.pikudo.repository.GastoRepository;
 import com.pikudo.repository.MetodoPagoRepository;
-import com.pikudo.repository.TransaccionPagoRepository;
 import com.pikudo.repository.UsuarioRepository;
+import com.pikudo.repository.orders.OrderPaymentRepository;
 import com.pikudo.service.CajaService;
 import com.pikudo.service.TicketPrinterService;
 
@@ -36,7 +36,7 @@ public class CajaServiceImpl implements CajaService {
     private final CajaRepository cajaRepository;
     private final GastoRepository gastoRepository;
     private final MetodoPagoRepository metodoPagoRepository;
-    private final TransaccionPagoRepository transaccionPagoRepository;
+    private final OrderPaymentRepository orderPaymentRepository;
     private final UsuarioRepository usuarioRepository;
     private final CajaMapper cajaMapper;
     private final TicketPrinterService ticketPrinterService;
@@ -86,9 +86,9 @@ public class CajaServiceImpl implements CajaService {
 
         LocalDateTime ahora = LocalDateTime.now();
 
-        BigDecimal efectivo = transaccionPagoRepository.calcularTotalPorTipoMetodo("EFECTIVO", caja.getFechaApertura(), ahora);
-        BigDecimal tarjeta = transaccionPagoRepository.calcularTotalPorTipoMetodo("TARJETA", caja.getFechaApertura(), ahora);
-        BigDecimal digital = transaccionPagoRepository.calcularTotalPorTipoMetodo("DIGITAL", caja.getFechaApertura(), ahora);
+        BigDecimal efectivo = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "EFECTIVO");
+        BigDecimal tarjeta = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "TARJETA");
+        BigDecimal digital = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "DIGITAL");
         BigDecimal gastos = gastoRepository.calcularTotalGastosPorRango(caja.getFechaApertura(), ahora);
 
         efectivo = (efectivo != null) ? efectivo : BigDecimal.ZERO;
@@ -97,6 +97,7 @@ public class CajaServiceImpl implements CajaService {
         gastos = (gastos != null) ? gastos : BigDecimal.ZERO;
 
         BigDecimal montoEsperado = caja.getMontoInicial().add(efectivo).subtract(gastos);
+        BigDecimal totalVentas = efectivo.add(tarjeta).add(digital);
 
         return CajaResumenDTO.builder()
                 .cajaId(caja.getId())
@@ -104,8 +105,13 @@ public class CajaServiceImpl implements CajaService {
                 .montoVentasEfectivo(efectivo)
                 .montoVentasTarjeta(tarjeta)
                 .montoVentasDigital(digital)
+                .montoVentasTotal(totalVentas)
                 .montoGastos(gastos)
                 .montoEsperadoEnCajon(montoEsperado)
+                .montoFinalReal(caja.getMontoFinalReal())
+                .diferencia(caja.getMontoFinalReal() != null ? caja.getMontoFinalReal().subtract(montoEsperado) : null)
+                .tienePagosParcialesPendientes(orderPaymentRepository.existsByCajaIdAndPedidoEstadoPago(
+                        caja.getId(), com.pikudo.entity.orders.OrderPaymentStatus.PARTIALLY_PAID))
                 .build();
     }
 
@@ -125,9 +131,14 @@ public class CajaServiceImpl implements CajaService {
 
         LocalDateTime finTurno = LocalDateTime.now();
 
-        BigDecimal efectivo = transaccionPagoRepository.calcularTotalPorTipoMetodo("EFECTIVO", caja.getFechaApertura(), finTurno);
-        BigDecimal tarjeta = transaccionPagoRepository.calcularTotalPorTipoMetodo("TARJETA", caja.getFechaApertura(), finTurno);
-        BigDecimal digital = transaccionPagoRepository.calcularTotalPorTipoMetodo("DIGITAL", caja.getFechaApertura(), finTurno);
+        if (orderPaymentRepository.existsByCajaIdAndPedidoEstadoPago(
+                caja.getId(), com.pikudo.entity.orders.OrderPaymentStatus.PARTIALLY_PAID)) {
+            throw new BusinessException("No se puede cerrar caja: existen pedidos con pago parcial pendiente.");
+        }
+
+        BigDecimal efectivo = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "EFECTIVO");
+        BigDecimal tarjeta = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "TARJETA");
+        BigDecimal digital = orderPaymentRepository.sumConfirmedByCajaIdAndTipoMetodo(caja.getId(), "DIGITAL");
         BigDecimal gastos = gastoRepository.calcularTotalGastosPorRango(caja.getFechaApertura(), finTurno);
 
         caja.setFechaCierre(finTurno);

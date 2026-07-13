@@ -19,7 +19,7 @@ public interface TransaccionPagoRepository extends JpaRepository<TransaccionPago
     // confiable ahora que un pedido puede tener varios metodos de pago a la vez.
     @Query("SELECT SUM(t.monto) FROM TransaccionPago t " +
            "WHERE t.metodoPago.tipo = :tipoMetodo " +
-           "AND t.comprobante.pedido.estado = 'PAID' " +
+           "AND t.comprobante.pedido.estadoPago = 'PAID' " +
            "AND t.fechaCreacion BETWEEN :desde AND :hasta")
     BigDecimal calcularTotalPorTipoMetodo(
             @Param("tipoMetodo") String tipoMetodo,
