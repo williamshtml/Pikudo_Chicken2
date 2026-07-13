@@ -20,6 +20,8 @@ public class SunatProperties {
     private String pfxPassword;
     private String endpointBeta;
     private String endpointProd;
+    private int maxAttempts = 5;
+    private int retryDelayMinutes = 10;
 
     @PostConstruct
     void validate() {

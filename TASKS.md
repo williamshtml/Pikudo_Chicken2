@@ -7,7 +7,9 @@
 - Fase 2 - Seguridad base: completada.
 - Fase 3 - Integraciones base y storage: completada.
 - Fase 4 - Catalogo real con Drive: completada.
-- Fase 5 - Flujo operativo de pedidos, mesas y caja: activa.
+- Fase 5 - Flujo operativo de pedidos, mesas y caja: completada.
+- Fase 6 - Comprobantes SUNAT: base real inicial implementada; pendiente validacion sandbox/prod con credenciales reales.
+- Fase 7 - Delivery, GPS y tracking real: activa.
 
 `docs/context/07_CODEX_TASKS.md` queda como historico. Este archivo es el tablero vivo para ordenar las siguientes implementaciones.
 
@@ -96,17 +98,23 @@
 - [x] Fase 6A: metadata para XML, CDR y PDF opcional enlazada a `storage_files`.
 - [x] Fase 6A: estructura logica Drive `FACTURAS`, `BOLETAS`, `NOTAS_DE_CREDITO`, `NOTAS_DE_DEBITO`.
 - [x] Fase 6A: boleta simple con `PUBLICO_GENERAL` / `SIN_DOCUMENTO`.
-- [ ] Fase 6B: Project OpenUBL XBuilder para XML UBL firmado.
-- [ ] Fase 6B: Project OpenUBL XSender para envio SUNAT/OSE.
+- [x] Fase 6B: dependencias Project OpenUBL XBuilder/XSender agregadas.
+- [x] Fase 6B: generacion y firma XML UBL inicial mediante XBuilder cuando SUNAT esta habilitado.
+- [x] Fase 6B: procesador transaccional de `sunat_submission_jobs`.
+- [x] Fase 6B: endpoints admin `/api/v1/sunat/jobs/**`.
+- [x] Fase 6B: XML firmado guardado mediante `StorageService`.
+- [ ] Fase 6C: validacion real sandbox/prod de XSender con certificado y credenciales oficiales.
+- [ ] Fase 6C: persistencia de CDR real y mapeo final de codigos SUNAT/OSE.
 
 ## Fase 7 - Delivery, GPS y tracking real
 
-- [ ] Entregas normalizadas.
-- [ ] Validacion de delivery activo antes de recibir GPS.
-- [ ] Ultima ubicacion en Redis con TTL.
-- [ ] Historico en PostgreSQL con retencion definida.
+- [x] Fase 7A: entregas normalizadas.
+- [x] Fase 7A: validacion de delivery activo antes de recibir GPS.
+- [x] Fase 7A: ultima ubicacion en Redis con TTL.
+- [x] Fase 7A: historico base en PostgreSQL.
+- [x] Fase 7A: endpoints `/api/v1/deliveries/**` y tracking publico `/api/v1/orders/tracking/{trackingCode}`.
 - [ ] WebSocket separado para admin, cliente y repartidor.
-- [ ] Vista publica con estado, avance, ETA/distancia aproximada y cercania, sin coordenadas exactas.
+- [x] Vista publica con estado, avance, ETA/distancia aproximada y cercania, sin coordenadas exactas.
 - [ ] Vista admin con mapa exacto y eventos de llegada a puntos de entrega.
 - [ ] App Flutter envia GPS solo con entrega activa y muestra mapa/deep link para guiar al repartidor.
 
