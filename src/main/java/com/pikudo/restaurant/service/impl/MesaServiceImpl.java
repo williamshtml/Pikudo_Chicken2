@@ -1,4 +1,5 @@
 package com.pikudo.restaurant.service.impl;
+
 import com.pikudo.restaurant.dto.mesa.MesaEstadoResponseDTO;
 import com.pikudo.restaurant.dto.mesa.MesaRequestDTO;
 import com.pikudo.restaurant.dto.mesa.MesaResponseDTO;
@@ -19,6 +20,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MesaServiceImpl implements MesaService {
+    private static final int SALON_POR_DEFECTO = 1;
+
     private static final List<OrderOperationalStatus> TERMINAL_STATUSES = List.of(
             OrderOperationalStatus.REJECTED,
             OrderOperationalStatus.DELIVERED,
@@ -37,6 +40,7 @@ public class MesaServiceImpl implements MesaService {
         Mesa mesa = Mesa.builder()
                 .numero(dto.getNumero())
                 .capacidad(dto.getCapacidad())
+                .salon(dto.getSalon() != null ? dto.getSalon() : SALON_POR_DEFECTO)
                 .estado(true)
                 .build();
         return mesaMapper.toDTO(mesaRepository.save(mesa));
@@ -73,6 +77,7 @@ public class MesaServiceImpl implements MesaService {
                             mesa.getId(),
                             mesa.getNumero(),
                             mesa.getCapacidad(),
+                            mesa.getSalon(),
                             mesa.getEstado(),
                             tienePedidoAbierto
                     );
@@ -98,6 +103,19 @@ public class MesaServiceImpl implements MesaService {
 
         mesa.setNumero(dto.getNumero());
         mesa.setCapacidad(dto.getCapacidad());
+        if (dto.getSalon() != null) {
+            mesa.setSalon(dto.getSalon());
+        }
+        return mesaMapper.toDTO(mesaRepository.save(mesa));
+    }
+
+    @Override
+    @Transactional
+    public MesaResponseDTO actualizarSalon(Long id, Integer salon) {
+        Mesa mesa = mesaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Mesa no encontrada con id: " + id));
+
+        mesa.setSalon(salon);
         return mesaMapper.toDTO(mesaRepository.save(mesa));
     }
 

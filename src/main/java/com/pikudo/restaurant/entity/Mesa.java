@@ -13,6 +13,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "mesas")
@@ -21,7 +22,6 @@ import lombok.Builder;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class Mesa {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,6 +37,16 @@ public class Mesa {
     @Column(nullable = false)
     private Integer capacidad;
 
+    // Identifica a qué salón/piso pertenece la mesa (1 = Salón 1, 2 = Salón 2, etc.).
+    // @ColumnDefault genera "DEFAULT 1" en el ALTER TABLE, para que agregar esta
+    // columna NOT NULL sobre una tabla con filas existentes no falle en Postgres/MySQL.
+    @Builder.Default
+    @ColumnDefault("1")
+    @Column(nullable = false)
+    private Integer salon = 1;
+
+    // true = mesa activa en catálogo, false = dada de baja (desactivar()).
+    // NO significa libre/ocupada — eso se calcula desde pedidos abiertos.
     @Builder.Default
     @Column(nullable = false)
     private Boolean estado = true;
